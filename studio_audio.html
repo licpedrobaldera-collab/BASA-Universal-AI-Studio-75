@@ -36,7 +36,6 @@
   </script>
 
   <style>
-    /* Estilos base y scrollbar limpio para el entorno Studio */
     body {
       background-color: #F1F5F9;
       color: #0F172A;
@@ -44,7 +43,6 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* Scrollbars sutiles */
     ::-webkit-scrollbar {
       width: 6px;
       height: 6px;
@@ -60,7 +58,6 @@
       background: #94A3B8;
     }
 
-    /* Range inputs personalizados */
     input[type="range"] {
       -webkit-appearance: none;
       background: transparent;
@@ -94,7 +91,7 @@
 </head>
 <body class="min-h-screen flex flex-col bg-[#F1F5F9] text-[#0F172A] overflow-x-hidden">
 
-  <!-- NOTIFICACIÓN TOAST FLOTANTE (Reemplaza alert/confirm) -->
+  <!-- NOTIFICACIÓN TOAST FLOTANTE -->
   <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4 sm:px-0"></div>
 
   <!-- 1. BARRA SUPERIOR (HEADER) -->
@@ -122,7 +119,6 @@
 
       <!-- Selector de Modelo IA y Botones de Exportación -->
       <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-        <!-- Selector Modelo IA -->
         <div class="flex items-center gap-2 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl px-2.5 py-1.5">
           <i class="fa-solid fa-microchip text-[#0284C7] text-xs"></i>
           <label for="ai-model-select" class="text-xs font-semibold text-slate-700 hidden md:inline">Motor IA:</label>
@@ -134,7 +130,6 @@
           </select>
         </div>
 
-        <!-- Botones de Exportación -->
         <div class="flex items-center gap-1.5">
           <button onclick="exportProjectJSON()" title="Exportar Proyecto Completo JSON" class="px-2.5 py-1.5 rounded-xl bg-white hover:bg-[#E0F2FE] text-black border border-[#CBD5E1] hover:border-[#38BDF8] text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer">
             <i class="fa-solid fa-file-code text-[#0284C7]"></i>
@@ -184,7 +179,6 @@
         <span>Herramientas Audio</span>
       </button>
 
-      <!-- Tarjeta informativa en escritorio -->
       <div class="hidden lg:block mt-auto pt-4 border-t border-[#E2E8F0]">
         <div class="bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl p-3">
           <div class="flex items-center justify-between mb-1">
@@ -198,16 +192,15 @@
       </div>
     </nav>
 
-    <!-- ÁREA CENTRAL DINÁMICA (Vistas de Navegación + Panel de Creación) -->
+    <!-- ÁREA CENTRAL DINÁMICA -->
     <main class="flex-1 flex flex-col xl:flex-row gap-4 min-w-0">
       
-      <!-- 3. PANEL DE CREACIÓN Y VISTAS SECUNDARIAS (IZQUIERDA/CENTRO) -->
+      <!-- 3. PANEL DE CREACIÓN Y VISTAS SECUNDARIAS -->
       <section id="primary-workspace" class="flex-1 bg-white border border-[#CBD5E1] rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col min-w-0">
         
-        <!-- VISTA A: CREAR MÚSICA (MODOS AGENT, CUSTOM, REMIX) -->
+        <!-- VISTA A: CREAR MÚSICA -->
         <div id="view-create" class="workspace-view flex flex-col gap-4 h-full">
           
-          <!-- Selector de Modos (Agent / Custom / Remix) -->
           <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#E2E8F0]">
             <div class="inline-flex p-1 bg-[#F1F5F9] border border-[#CBD5E1] rounded-xl w-full sm:w-auto">
               <button onclick="setCreationMode('agent')" id="mode-btn-agent" class="mode-tab flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs sm:text-sm font-bold bg-white text-[#0284C7] shadow-xs border border-[#BAE6FD] transition cursor-pointer flex items-center justify-center gap-1.5">
@@ -230,7 +223,7 @@
             </div>
           </div>
 
-          <!-- SUB-PANEL 1: MODO AGENT (Asistente Creativo) -->
+          <!-- SUB-PANEL 1: MODO AGENT -->
           <div id="panel-agent" class="creation-panel flex flex-col gap-4">
             <div class="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4">
               <div class="flex items-center justify-between mb-2">
@@ -242,7 +235,6 @@
               </div>
               <textarea id="agent-idea-input" rows="3" placeholder="Ej: Un merengue típico alegre con acordeón virtuoso y güira metálica sobre una fiesta en el Cibao al atardecer..." class="w-full rounded-xl border border-[#CBD5E1] bg-white p-3 text-sm text-black placeholder-slate-400 focus:outline-none focus:border-[#0284C7] focus:ring-2 focus:ring-[#E0F2FE] transition"></textarea>
               
-              <!-- Chips de inspiración rápida -->
               <div class="mt-3">
                 <span class="text-xs font-semibold text-slate-600 block mb-1.5">Ideas rápidas dominicanas y latinas:</span>
                 <div class="flex flex-wrap gap-1.5">
@@ -286,7 +278,6 @@
               </div>
             </div>
 
-            <!-- Vista previa rápida de lo que el Agent enviará al estudio -->
             <div class="bg-white border border-[#CBD5E1] rounded-2xl p-4 flex flex-col gap-2">
               <div class="flex items-center justify-between">
                 <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Flujo Inteligente BASA Agent</h3>
@@ -298,10 +289,9 @@
             </div>
           </div>
 
-          <!-- SUB-PANEL 2: MODO CUSTOM (Editor Completo) -->
+          <!-- SUB-PANEL 2: MODO CUSTOM -->
           <div id="panel-custom" class="creation-panel hidden flex-col gap-4">
             
-            <!-- Título y Género -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label for="track-title" class="block text-xs font-bold text-black mb-1">Título de la Obra</label>
@@ -321,7 +311,6 @@
               </div>
             </div>
 
-            <!-- Editor de Letra con Etiquetas Estructurales -->
             <div class="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-3">
               <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <label for="track-lyrics" class="text-xs font-bold text-black flex items-center gap-1.5">
@@ -359,15 +348,11 @@ De mi tierra linda, pura melodía
 (Cierre en seco con redoble de tambora y acorde mayor)</textarea>
             </div>
 
-            <!-- Instrumentación Clave (Multi-selección) -->
             <div>
               <span class="block text-xs font-bold text-black mb-1.5">Instrumentación Clave del Arreglo</span>
-              <div id="instruments-container" class="flex flex-wrap gap-2">
-                <!-- Se renderizan dinámicamente con JS -->
-              </div>
+              <div id="instruments-container" class="flex flex-wrap gap-2"></div>
             </div>
 
-            <!-- Tipo de Voz, Tonalidad, BPM y Duración -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-3">
               <div>
                 <label for="track-voice" class="block text-xs font-bold text-black mb-1">Tipo de Voz</label>
@@ -461,9 +446,7 @@ De mi tierra linda, pura melodía
                 </div>
               </div>
 
-              <div id="remix-source-card" class="bg-white border border-[#CBD5E1] rounded-xl p-3 text-xs text-slate-700">
-                <!-- Detalles cargados dinámicamente -->
-              </div>
+              <div id="remix-source-card" class="bg-white border border-[#CBD5E1] rounded-xl p-3 text-xs text-slate-700"></div>
 
               <div class="flex justify-end">
                 <button type="button" onclick="generateRemixTrack()" class="px-5 py-2.5 rounded-xl bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs sm:text-sm font-bold shadow-xs transition flex items-center gap-2 cursor-pointer">
@@ -474,7 +457,6 @@ De mi tierra linda, pura melodía
             </div>
           </div>
 
-          <!-- BOTÓN PRINCIPAL DE GENERACIÓN (Siempre accesible en Crear Música) -->
           <div id="main-generate-footer" class="mt-auto pt-3 border-t border-[#E2E8F0] flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center gap-2 text-xs text-slate-600">
               <i class="fa-solid fa-shield-halved text-[#0284C7]"></i>
@@ -487,14 +469,14 @@ De mi tierra linda, pura melodía
           </div>
         </div>
 
-        <!-- VISTA B: INICIO (RESUMEN DEL ESTUDIO) -->
+        <!-- VISTA B: INICIO -->
         <div id="view-home" class="workspace-view hidden flex-col gap-4">
           <div class="bg-[#E0F2FE] border border-[#BAE6FD] rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <span class="inline-block px-2.5 py-0.5 rounded-full bg-white text-[#0284C7] text-xs font-bold mb-2">BASA Universal Studio v10.4</span>
+              <span class="inline-block px-2.5 py-0.5 rounded-full bg-white text-[#0284C7] text-xs font-bold mb-2">BASA Universal Studio v10.5</span>
               <h2 class="text-xl sm:text-2xl font-extrabold text-black tracking-tight">Tu Estudio de Producción Musical Caribeña y Latina</h2>
               <p class="text-xs sm:text-sm text-slate-800 mt-1 max-w-2xl">
-                Compone letras estructuradas, diseña arreglos con güira, tambora, acordeón y requinto, y previsualiza cada ritmo en tiempo real con síntesis Web Audio API.
+                Compone letras estructuradas, diseña arreglos con güira, tambora, acordeón, metales y requinto, y previsualiza o exporta en WAV con síntesis Web Audio API.
               </p>
             </div>
             <button onclick="switchWorkspaceTab('create')" class="px-5 py-2.5 rounded-xl bg-[#0284C7] text-white text-xs sm:text-sm font-bold hover:bg-[#0369A1] transition shrink-0 cursor-pointer">
@@ -527,7 +509,7 @@ De mi tierra linda, pura melodía
           </div>
         </div>
 
-        <!-- VISTA C: ESTUDIO MULTIPISTA (MEZCLADOR DE STEMS EN TIEMPO REAL) -->
+        <!-- VISTA C: ESTUDIO MULTIPISTA -->
         <div id="view-multitrack" class="workspace-view hidden flex-col gap-4">
           <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#E2E8F0]">
             <div>
@@ -540,7 +522,6 @@ De mi tierra linda, pura melodía
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" id="mixer-channels">
-            <!-- Canal 1: Percusión / Güira & Tambora -->
             <div class="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4 flex flex-col gap-3">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-extrabold text-black flex items-center gap-1.5">
@@ -555,7 +536,6 @@ De mi tierra linda, pura melodía
               </div>
             </div>
 
-            <!-- Canal 2: Bajo / Tumbao -->
             <div class="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4 flex flex-col gap-3">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-extrabold text-black flex items-center gap-1.5">
@@ -570,7 +550,6 @@ De mi tierra linda, pura melodía
               </div>
             </div>
 
-            <!-- Canal 3: Armonía / Piano & Guitarra -->
             <div class="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4 flex flex-col gap-3">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-extrabold text-black flex items-center gap-1.5">
@@ -585,7 +564,6 @@ De mi tierra linda, pura melodía
               </div>
             </div>
 
-            <!-- Canal 4: Melodía Líder / Acordeón / Voz -->
             <div class="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4 flex flex-col gap-3">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-extrabold text-black flex items-center gap-1.5">
@@ -617,7 +595,6 @@ De mi tierra linda, pura melodía
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Tap Tempo -->
             <div class="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4 flex flex-col justify-between gap-3">
               <div>
                 <h3 class="text-sm font-bold text-black flex items-center gap-2">
@@ -642,7 +619,6 @@ De mi tierra linda, pura melodía
               </div>
             </div>
 
-            <!-- Generador de Progresiones de Acordes -->
             <div class="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4 flex flex-col justify-between gap-3">
               <div>
                 <h3 class="text-sm font-bold text-black flex items-center gap-2">
@@ -663,7 +639,7 @@ De mi tierra linda, pura melodía
 
       </section>
 
-      <!-- 4. PANEL DE BIBLIOTECA BASA (DERECHA) -->
+      <!-- 4. PANEL DE BIBLIOTECA BASA -->
       <aside id="library-panel" class="w-full xl:w-[420px] shrink-0 bg-white border border-[#CBD5E1] rounded-2xl p-4 shadow-xs flex flex-col gap-3">
         <div class="flex items-center justify-between pb-2.5 border-b border-[#E2E8F0]">
           <div class="flex items-center gap-2">
@@ -676,30 +652,23 @@ De mi tierra linda, pura melodía
           </button>
         </div>
 
-        <!-- Buscador rápido en biblioteca -->
         <div class="relative">
           <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
           <input type="text" id="library-search" oninput="renderLibrary()" placeholder="Filtrar por título, género o instrumento..." class="w-full pl-8 pr-3 py-2 rounded-xl border border-[#CBD5E1] bg-[#F8FAFC] text-xs font-medium text-black placeholder-slate-400 focus:outline-none focus:border-[#0284C7] focus:bg-white">
         </div>
 
-        <!-- Lista de Pistas Generadas -->
-        <div id="library-list" class="flex flex-col gap-2.5 overflow-y-auto max-h-[540px] pr-0.5">
-          <!-- Renderizado dinámico por JS -->
-        </div>
+        <div id="library-list" class="flex flex-col gap-2.5 overflow-y-auto max-h-[540px] pr-0.5"></div>
       </aside>
 
     </main>
   </div>
 
-  <!-- REPRODUCTOR INFERIOR PERSISTENTE CON VISUALIZADOR WEB AUDIO API -->
+  <!-- REPRODUCTOR INFERIOR PERSISTENTE -->
   <footer class="fixed bottom-0 inset-x-0 z-40 bg-white border-t border-[#CBD5E1] shadow-lg">
     <div class="max-w-[1600px] mx-auto px-3 sm:px-5 py-2.5 flex flex-col md:flex-row items-center justify-between gap-3">
       
-      <!-- Info de Pista Actual -->
       <div class="flex items-center gap-3 w-full md:w-1/3 min-w-0">
-        <div id="player-cover-mini" class="w-11 h-11 rounded-xl border border-[#CBD5E1] overflow-hidden shrink-0 bg-[#E0F2FE] flex items-center justify-center">
-          <!-- Carátula SVG dinámica -->
-        </div>
+        <div id="player-cover-mini" class="w-11 h-11 rounded-xl border border-[#CBD5E1] overflow-hidden shrink-0 bg-[#E0F2FE] flex items-center justify-center"></div>
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-2">
             <h4 id="player-track-title" class="text-xs sm:text-sm font-extrabold text-black truncate">Selecciona o produce una pista</h4>
@@ -709,7 +678,6 @@ De mi tierra linda, pura melodía
         </div>
       </div>
 
-      <!-- Controles de Transporte y Barra de Progreso -->
       <div class="flex flex-col items-center gap-1.5 w-full md:w-1/3">
         <div class="flex items-center gap-4">
           <button onclick="playPreviousTrack()" title="Pista Anterior" class="w-8 h-8 rounded-full hover:bg-[#F1F5F9] text-slate-700 hover:text-black flex items-center justify-center transition cursor-pointer">
@@ -735,7 +703,6 @@ De mi tierra linda, pura melodía
         </div>
       </div>
 
-      <!-- Visualizador de Frecuencias Real + Volumen Master + Descarga WAV -->
       <div class="flex items-center justify-between md:justify-end gap-3 w-full md:w-1/3">
         <div class="flex-1 md:flex-initial w-36 sm:w-44 h-10 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl p-1 overflow-hidden">
           <canvas id="visualizer-canvas" class="w-full h-full block"></canvas>
@@ -782,15 +749,8 @@ De mi tierra linda, pura melodía
 
   <!-- LÓGICA DE APLICACIÓN Y MOTOR WEB AUDIO API -->
   <script>
-    /**
-     * ============================================================================
-     * BASA UNIVERSAL AI STUDIO — MOTOR DE ESTADO, COMPOSICIÓN Y SÍNTESIS DSP
-     * ============================================================================
-     */
-
     const STORAGE_KEY = 'basa_universal_studio_library_v1';
 
-    // Catálogo de instrumentos disponibles
     const AVAILABLE_INSTRUMENTS = [
       'Güira Metálica',
       'Tambora Dominicana',
@@ -805,67 +765,68 @@ De mi tierra linda, pura melodía
       'Guitarrón & Trompeta'
     ];
 
-    // Configuración musical por género (BPM sugerido, escala, instrumentos y patrón rítmico)
     const GENRE_PRESETS = {
       'Merengue Típico': {
         bpm: 142,
         key: 'Am',
         instruments: ['Güira Metálica', 'Tambora Dominicana', 'Acordeón Diatónico', 'Bajo Tumbao'],
         color1: '#0284C7',
-        color2: '#38BDF8',
-        scaleFreqs: [220.00, 246.94, 261.63, 293.66, 329.63, 349.23, 415.30, 440.00] // A harmonic minor
+        color2: '#38BDF8'
       },
       'Bachata': {
         bpm: 124,
         key: 'Am',
         instruments: ['Requinto Bachatero', 'Bongó & Campana', 'Güira Metálica', 'Bajo Tumbao'],
         color1: '#0369A1',
-        color2: '#7DD3FC',
-        scaleFreqs: [220.00, 261.63, 329.63, 349.23, 392.00, 440.00, 523.25]
+        color2: '#7DD3FC'
       },
       'Bolero': {
         bpm: 82,
         key: 'Dm',
         instruments: ['Guitarra Acústica', 'Bongó & Campana', 'Bajo Tumbao'],
         color1: '#1E293B',
-        color2: '#38BDF8',
-        scaleFreqs: [146.83, 174.61, 220.00, 261.63, 293.66, 349.23]
+        color2: '#38BDF8'
       },
       'Salsa Dura': {
         bpm: 102,
         key: 'C',
         instruments: ['Piano Montuno', 'Trombones & Metales', 'Bongó & Campana', 'Bajo Tumbao'],
         color1: '#0284C7',
-        color2: '#0EA5E9',
-        scaleFreqs: [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25]
+        color2: '#0EA5E9'
       },
       'Merengue de Calle': {
         bpm: 134,
         key: 'Em',
         instruments: ['Güira Metálica', 'Tambora Dominicana', 'Trombones & Metales', 'Sub-Bajo 808'],
         color1: '#0369A1',
-        color2: '#38BDF8',
-        scaleFreqs: [164.81, 196.00, 220.00, 246.94, 293.66, 329.63]
+        color2: '#38BDF8'
       },
       'Dembow': {
         bpm: 118,
         key: 'Fm',
         instruments: ['Sub-Bajo 808', 'Güira Metálica', 'Tambora Dominicana'],
         color1: '#0F172A',
-        color2: '#0284C7',
-        scaleFreqs: [174.61, 207.65, 233.08, 261.63, 311.13, 349.23]
+        color2: '#0284C7'
       },
       'Ranchera': {
         bpm: 96,
         key: 'G',
         instruments: ['Guitarrón & Trompeta', 'Guitarra Acústica'],
         color1: '#0284C7',
-        color2: '#BAE6FD',
-        scaleFreqs: [196.00, 246.94, 293.66, 329.63, 369.99, 392.00]
+        color2: '#BAE6FD'
       }
     };
 
-    // 3 Pistas de Ejemplo Precargadas
+    const KEY_ROOT_FREQS = {
+      'C': 261.63,
+      'Dm': 293.66,
+      'Em': 164.81,
+      'Fm': 174.61,
+      'F': 174.61,
+      'G': 196.00,
+      'Am': 220.00
+    };
+
     const DEFAULT_LIBRARY = [
       {
         id: 'basa-track-01',
@@ -908,13 +869,11 @@ De mi tierra linda, pura melodía
       }
     ];
 
-    // Estado global de la aplicación
     let libraryTracks = [];
     let selectedInstruments = new Set(['Güira Metálica', 'Tambora Dominicana', 'Acordeón Diatónico', 'Bajo Tumbao']);
     let currentTrackId = null;
     let modalInspectedTrack = null;
 
-    // Estado del Motor de Audio (Web Audio API)
     let audioCtx = null;
     let analyserNode = null;
     let masterGainNode = null;
@@ -925,7 +884,6 @@ De mi tierra linda, pura melodía
     let playbackElapsed = 0;
     let masterVolume = 0.85;
 
-    // Ganancias y Mute por Stem (Estudio Multipista)
     const stemState = {
       perc: { vol: 0.85, muted: false },
       bass: { vol: 0.90, muted: false },
@@ -933,13 +891,9 @@ De mi tierra linda, pura melodía
       lead: { vol: 0.80, muted: false }
     };
 
-    // Tap Tempo variables
     let tapTimes = [];
     let lastTappedBpm = 120;
 
-    /**
-     * Inicialización al cargar el documento
-     */
     window.addEventListener('DOMContentLoaded', () => {
       loadLibraryFromStorage();
       renderInstrumentChips();
@@ -948,17 +902,11 @@ De mi tierra linda, pura melodía
       updateRangeLabels();
       initVisualizerCanvas();
 
-      // Seleccionar primera pista por defecto sin auto-reproducir (política de navegador)
       if (libraryTracks.length > 0) {
         selectTrackForPlayer(libraryTracks[0].id, false);
       }
     });
 
-    /**
-     * ============================================================================
-     * PERSISTENCIA EN LOCALSTORAGE
-     * ============================================================================
-     */
     function loadLibraryFromStorage() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
@@ -1000,13 +948,7 @@ De mi tierra linda, pura melodía
       document.getElementById('library-total-badge').textContent = `${count} ${count === 1 ? 'pista' : 'pistas'}`;
     }
 
-    /**
-     * ============================================================================
-     * NAVEGACIÓN Y MODOS DE CREACIÓN (AGENT / CUSTOM / REMIX)
-     * ============================================================================
-     */
     function switchWorkspaceTab(tabName) {
-      // Actualizar botones laterales
       document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.classList.remove('bg-[#E0F2FE]', 'text-[#0284C7]', 'border', 'border-[#BAE6FD]', 'font-bold');
         btn.classList.add('text-slate-700', 'font-semibold');
@@ -1028,13 +970,11 @@ De mi tierra linda, pura melodía
         }
       }
 
-      // En móvil/tablet, si pulsa Biblioteca BASA, hacer scroll suave al panel derecho
       if (tabName === 'library') {
         document.getElementById('library-panel').scrollIntoView({ behavior: 'smooth' });
         return;
       }
 
-      // Mostrar vista correspondiente en el panel central
       document.querySelectorAll('.workspace-view').forEach(view => view.classList.add('hidden'));
       const targetView = document.getElementById(`view-${tabName}`);
       if (targetView) {
@@ -1044,7 +984,6 @@ De mi tierra linda, pura melodía
     }
 
     function setCreationMode(mode) {
-      // Actualizar pestañas Agent / Custom / Remix
       document.querySelectorAll('.mode-tab').forEach(btn => {
         btn.classList.remove('bg-white', 'text-[#0284C7]', 'shadow-xs', 'border', 'border-[#BAE6FD]', 'font-bold');
         btn.classList.add('text-slate-700', 'font-semibold');
@@ -1056,7 +995,6 @@ De mi tierra linda, pura melodía
         activeTab.classList.remove('text-slate-700', 'font-semibold');
       }
 
-      // Mostrar panel correspondiente
       document.querySelectorAll('.creation-panel').forEach(panel => {
         panel.classList.add('hidden');
         panel.classList.remove('flex');
@@ -1068,7 +1006,6 @@ De mi tierra linda, pura melodía
         activePanel.classList.add('flex');
       }
 
-      // Ocultar el botón inferior general en modo Remix (ya tiene su propio botón dedicado)
       const mainFooter = document.getElementById('main-generate-footer');
       if (mode === 'remix') {
         mainFooter.classList.add('hidden');
@@ -1084,11 +1021,6 @@ De mi tierra linda, pura melodía
       showToast(`Motor cambiado a ${model}`, 'info');
     }
 
-    /**
-     * ============================================================================
-     * MODO AGENT: COMPOSITOR INTELIGENTE DE LETRAS Y ESTRUCTURA
-     * ============================================================================
-     */
     function fillAgentPrompt(text) {
       document.getElementById('agent-idea-input').value = text;
     }
@@ -1102,7 +1034,6 @@ De mi tierra linda, pura melodía
         return;
       }
 
-      // Detectar género por palabras clave si está en automático
       let detectedGenre = hintGenre;
       if (detectedGenre === 'auto') {
         const lower = idea.toLowerCase();
@@ -1117,16 +1048,13 @@ De mi tierra linda, pura melodía
 
       const preset = GENRE_PRESETS[detectedGenre] || GENRE_PRESETS['Merengue Típico'];
 
-      // Generar título creativo basado en la idea
       const words = idea.replace(/[.,!?]/g, '').split(' ').filter(w => w.length > 3);
       const keyword = words.length > 0 ? words[Math.floor(Math.random() * Math.min(words.length, 4))] : 'Caribe';
       const capitalizedKeyword = keyword.charAt(0).toUpperCase() + keyword.slice(1);
       const generatedTitle = `${detectedGenre}: Eco de ${capitalizedKeyword}`;
 
-      // Generar letra estructurada contextual
       const generatedLyrics = `[Intro]\n(Entrada instrumental de ${preset.instruments.slice(0, 2).join(' y ')} a ${preset.bpm} BPM)\n\n[Verso]\nInspirado en esta historia: ${idea.slice(0, 75)}\nEl ritmo va subiendo con fuerza y sentimiento\nCada compás dibuja nuestra propia identidad\nCon el sello inconfundible de BASA Universal\n\n[Coro]\n¡Suena el ${detectedGenre} con toda su pasión!\nQue retumbe la pista y vibre el corazón\nDe Santo Domingo para el mundo entero\nEste arreglo maestro llegó primero\n\n[Mambo]\n(Puente instrumental con ${preset.instruments.join(', ')})\n\n[Outro]\n(Cierre magistral en tonalidad ${preset.key})`;
 
-      // Volcar datos al editor Custom
       document.getElementById('track-title').value = generatedTitle;
       document.getElementById('track-genre').value = detectedGenre;
       document.getElementById('track-bpm').value = preset.bpm;
@@ -1137,16 +1065,10 @@ De mi tierra linda, pura melodía
       renderInstrumentChips();
       updateRangeLabels();
 
-      // Cambiar automáticamente a Custom para revisión y producción
       setCreationMode('custom');
       showToast(`Agent generó "${generatedTitle}" (${detectedGenre}). Revisa y pulsa Producir.`, 'success');
     }
 
-    /**
-     * ============================================================================
-     * MODO CUSTOM: CONTROLES DE EDICIÓN E INSTRUMENTACIÓN
-     * ============================================================================
-     */
     function renderInstrumentChips() {
       const container = document.getElementById('instruments-container');
       container.innerHTML = '';
@@ -1202,13 +1124,7 @@ De mi tierra linda, pura melodía
       document.getElementById('duration-display').textContent = formatSeconds(dur);
     }
 
-    /**
-     * ============================================================================
-     * PRODUCCIÓN DE PISTAS Y MODO REMIX
-     * ============================================================================
-     */
     function generateNewTrack() {
-      // Si el usuario está en Agent y pulsa Producir directamente, ejecutar Agent primero si el título está vacío
       const titleInput = document.getElementById('track-title').value.trim();
       const title = titleInput || 'Producción BASA Sin Título';
       const genre = document.getElementById('track-genre').value;
@@ -1305,11 +1221,6 @@ De mi tierra linda, pura melodía
       showToast(`Remix "${remixTrack.title}" creado con éxito.`, 'success');
     }
 
-    /**
-     * ============================================================================
-     * RENDERIZADO DE BIBLIOTECA Y CARÁTULAS SVG DINÁMICAS
-     * ============================================================================
-     */
     function generateDynamicCoverSVG(track) {
       const preset = GENRE_PRESETS[track.genre] || { color1: '#0284C7', color2: '#38BDF8' };
       const initials = track.title
@@ -1319,7 +1230,6 @@ De mi tierra linda, pura melodía
         .join('')
         .toUpperCase();
 
-      // Generar barras decorativas deterministas según el ID
       const seed = track.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
       const h1 = 10 + (seed % 16);
       const h2 = 14 + ((seed * 3) % 18);
@@ -1438,11 +1348,6 @@ De mi tierra linda, pura melodía
       showToast('Pista eliminada de la biblioteca.', 'info');
     }
 
-    /**
-     * ============================================================================
-     * MODAL DE LETRAS Y FICHA TÉCNICA
-     * ============================================================================
-     */
     function openLyricsModal(trackId) {
       const track = libraryTracks.find(t => t.id === trackId);
       if (!track) return;
@@ -1486,15 +1391,17 @@ De mi tierra linda, pura melodía
       showToast('Arreglo cargado en el editor Custom para edición.', 'success');
     }
 
-    /**
-     * ============================================================================
-     * MOTOR DE AUDIO SINTETIZADO WEB AUDIO API (TIEMPO REAL + VISUALIZADOR)
-     * ============================================================================
-     */
     function ensureAudioContext() {
       if (!audioCtx) {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         audioCtx = new AudioContextClass();
+
+        const compressor = audioCtx.createDynamicsCompressor();
+        compressor.threshold.value = -12;
+        compressor.knee.value = 18;
+        compressor.ratio.value = 4;
+        compressor.attack.value = 0.005;
+        compressor.release.value = 0.15;
 
         masterGainNode = audioCtx.createGain();
         masterGainNode.gain.value = masterVolume;
@@ -1503,7 +1410,8 @@ De mi tierra linda, pura melodía
         analyserNode.fftSize = 64;
         analyserNode.smoothingTimeConstant = 0.8;
 
-        masterGainNode.connect(analyserNode);
+        masterGainNode.connect(compressor);
+        compressor.connect(analyserNode);
         analyserNode.connect(audioCtx.destination);
       }
       if (audioCtx.state === 'suspended') {
@@ -1521,7 +1429,6 @@ De mi tierra linda, pura melodía
       currentTrackId = track.id;
       playbackElapsed = 0;
 
-      // Actualizar interfaz del reproductor inferior
       document.getElementById('player-cover-mini').innerHTML = generateDynamicCoverSVG(track);
       document.getElementById('player-track-title').textContent = track.title;
       document.getElementById('player-genre-badge').textContent = track.genre;
@@ -1566,16 +1473,16 @@ De mi tierra linda, pura melodía
       updatePlayButtonUI();
       renderLibrary();
 
-      // Intervalo de pasos semicorcheas (16 pasos por compás)
       const stepDurationMs = (60 / track.bpm / 4) * 1000;
+      const initialRatio = track.duration > 0 ? (playbackElapsed / track.duration) : 0.35;
 
-      // Disparar primer paso inmediatamente
-      triggerSynthesizedStep(track, currentStep);
+      triggerSynthesizedStep(track, currentStep, audioCtx, masterGainNode, null, initialRatio);
       currentStep = (currentStep + 1) % 16;
 
       schedulerTimer = setInterval(() => {
         if (!isPlaying) return;
-        triggerSynthesizedStep(track, currentStep);
+        const ratio = track.duration > 0 ? (playbackElapsed / track.duration) : 0.35;
+        triggerSynthesizedStep(track, currentStep, audioCtx, masterGainNode, null, ratio);
         currentStep = (currentStep + 1) % 16;
       }, stepDurationMs);
 
@@ -1654,149 +1561,224 @@ De mi tierra linda, pura melodía
       }
     }
 
+    function getScaleForTrack(track) {
+      const root = KEY_ROOT_FREQS[track.key] || 220.00;
+      const isMinor = track.key.endsWith('m');
+      const intervals = isMinor ? [0, 2, 3, 5, 7, 8, 11, 12] : [0, 2, 4, 5, 7, 9, 11, 12];
+      return intervals.map(semi => root * Math.pow(2, semi / 12));
+    }
+
+    function getSectionByProgress(progressRatio) {
+      if (progressRatio < 0.12) return 'intro';
+      if (progressRatio < 0.38) return 'verso';
+      if (progressRatio < 0.62) return 'coro';
+      if (progressRatio < 0.85) return 'mambo';
+      return 'outro';
+    }
+
     /**
-     * Síntesis Rítmica y Armónica por Paso según Género
+     * Síntesis Rítmica, Tonal y Estructural Unificada (Vivo + Render Offline WAV)
      */
-    function triggerSynthesizedStep(track, step) {
-      if (!audioCtx || !masterGainNode) return;
-      const now = audioCtx.currentTime;
-      const preset = GENRE_PRESETS[track.genre] || GENRE_PRESETS['Merengue Típico'];
-      const scale = preset.scaleFreqs;
+    function triggerSynthesizedStep(track, step, targetCtx = audioCtx, targetDest = masterGainNode, when = null, progressRatio = 0.4) {
+      if (!targetCtx || !targetDest) return;
+      const now = when !== null ? when : targetCtx.currentTime;
+      const scale = getScaleForTrack(track);
+      const section = getSectionByProgress(progressRatio);
+      const instList = track.instruments || [];
 
-      // 1. CANAL PERCUSIÓN (Tambora / Bombo / Güira / Bongó)
+      const hasGuira = instList.some(i => i.includes('Güira'));
+      const hasTambora = instList.some(i => i.includes('Tambora') || i.includes('Bongó'));
+      const hasBrass = instList.some(i => i.includes('Trombones') || i.includes('Trompeta'));
+      const hasAccordion = instList.some(i => i.includes('Acordeón'));
+      const hasRequinto = instList.some(i => i.includes('Requinto') || i.includes('Guitarra'));
+      const has808 = instList.some(i => i.includes('808'));
+
+      const sectionEnergy = section === 'mambo' ? 1.15 : (section === 'coro' ? 1.05 : (section === 'intro' || section === 'outro' ? 0.78 : 0.92));
+
+      // 1. CANAL PERCUSIÓN (Tambora Dominicana & Güira Metálica)
       if (!stemState.perc.muted && stemState.perc.vol > 0) {
-        const pVol = stemState.perc.vol * 0.45;
+        const pVol = stemState.perc.vol * 0.48 * sectionEnergy;
 
-        // Golpe grave (Tambora / Bombo)
         const isKickStep =
-          (track.genre.includes('Merengue') && (step % 4 === 0 || step === 14)) ||
+          (track.genre.includes('Merengue') && (step % 4 === 0 || (section === 'mambo' && step === 14))) ||
           (track.genre === 'Bachata' && (step === 0 || step === 4 || step === 8 || step === 12 || step === 14)) ||
           (track.genre === 'Dembow' && (step % 4 === 0)) ||
           (track.genre === 'Salsa Dura' && (step === 0 || step === 6 || step === 8 || step === 14)) ||
           ((track.genre === 'Bolero' || track.genre === 'Ranchera') && (step === 0 || step === 8));
 
-        if (isKickStep) {
-          playDrumKick(now, pVol, track.genre === 'Dembow' ? 48 : 72);
+        if (isKickStep && (hasTambora || has808 || track.genre === 'Dembow')) {
+          playDrumKick(targetCtx, targetDest, now, pVol, (has808 || track.genre === 'Dembow') ? 52 : 76);
         }
 
-        // Golpe agudo / Slap / Caja / Dembow snare
         const isSnareStep =
           (track.genre === 'Dembow' && (step === 3 || step === 6 || step === 11 || step === 14)) ||
-          (track.genre.includes('Merengue') && (step === 2 || step === 6 || step === 10 || step === 14)) ||
+          (track.genre.includes('Merengue') && (step === 2 || step === 6 || step === 10 || step === 14 || ((section === 'mambo' || section === 'coro') && step === 15))) ||
           (track.genre === 'Bachata' && (step === 6 || step === 14)) ||
           (track.genre === 'Salsa Dura' && (step === 4 || step === 10 || step === 12));
 
-        if (isSnareStep) {
-          playPercussionSlap(now, pVol * 0.75);
+        if (isSnareStep && hasTambora) {
+          playPercussionSlap(targetCtx, targetDest, now, pVol * 0.8);
         }
 
-        // Raspado continuo de Güira Metálica / Hi-Hat
-        if (step % 2 === 0 || track.genre.includes('Merengue')) {
-          const accent = step % 4 === 0 ? 1.0 : 0.45;
-          playGuiraScrape(now, pVol * 0.25 * accent);
+        if (hasGuira || track.genre.includes('Merengue') || track.genre === 'Bachata') {
+          const isStrong = step % 4 === 0;
+          const isMid = step % 2 === 0;
+          if (isMid || track.genre.includes('Merengue')) {
+            const guiraGain = isStrong ? pVol * 0.34 : (isMid ? pVol * 0.22 : pVol * 0.12);
+            const scrapeDur = isStrong ? 0.065 : 0.032;
+            playGuiraScrape(targetCtx, targetDest, now, guiraGain, scrapeDur);
+          }
         }
       }
 
-      // 2. CANAL BAJO / TUMBAO
-      if (!stemState.bass.muted && stemState.bass.vol > 0) {
-        const bVol = stemState.bass.vol * 0.35;
+      // 2. CANAL BAJO / TUMBAO / SUB-BAJO 808
+      if (!stemState.bass.muted && stemState.bass.vol > 0 && section !== 'intro') {
+        const bVol = stemState.bass.vol * 0.38;
+        const rootNote = scale[0] / 2;
+        const fifthNote = scale[4] / 2;
+        const sixthNote = scale[5] / 2;
+
         if (step === 0 || step === 6 || step === 8 || step === 14) {
-          const bassNote = (step === 8 || step === 14) ? scale[4] / 2 : scale[0] / 2;
-          playTone(now, bassNote, 'triangle', 0.22, bVol);
+          let freq = rootNote;
+          if (step === 6) freq = fifthNote;
+          if (step === 8) freq = (section === 'coro' || section === 'mambo') ? sixthNote : fifthNote;
+          if (step === 14) freq = fifthNote;
+
+          const dur = has808 ? 0.34 : 0.22;
+          playTone(targetCtx, targetDest, now, freq, has808 ? 'sine' : 'triangle', dur, bVol, 900);
         }
       }
 
-      // 3. CANAL ARMONÍA / REQUINTO / PIANO MONTUNO
+      // 3. CANAL ARMONÍA / PIANO MONTUNO / GUITARRA
       if (!stemState.chord.muted && stemState.chord.vol > 0) {
         const cVol = stemState.chord.vol * 0.22;
-        if (step % 4 === 2 || step === 0) {
-          const chordRoot = scale[(step / 4) % 4];
-          playTone(now, chordRoot, 'sine', 0.18, cVol);
-          playTone(now, chordRoot * 1.25, 'sine', 0.18, cVol * 0.8);
+        if (step === 2 || step === 6 || step === 10 || step === 14) {
+          const chordBase = (step >= 8) ? scale[4] : scale[0];
+          const third = (step >= 8) ? scale[6] : scale[2];
+          const wave = hasRequinto ? 'triangle' : 'sine';
+          playTone(targetCtx, targetDest, now, chordBase, wave, 0.16, cVol, 2400);
+          playTone(targetCtx, targetDest, now, third, wave, 0.16, cVol * 0.75, 2400);
         }
       }
 
-      // 4. CANAL MELODÍA LÍDER (Acordeón / Requinto / Metales)
-      if (!stemState.lead.muted && stemState.lead.vol > 0) {
-        const lVol = stemState.lead.vol * 0.24;
-        // Patrón melódico sincopado
-        const melodyPattern = [0, -1, 2, -1, 4, 3, 2, -1, 5, -1, 4, 2, 1, -1, 0, -1];
-        const noteIndex = melodyPattern[step];
+      // 4. CANAL MELODÍA LÍDER (Acordeón / Trombones & Metales / Requinto)
+      if (!stemState.lead.muted && stemState.lead.vol > 0 && section !== 'outro') {
+        const lVol = stemState.lead.vol * 0.25 * sectionEnergy;
+        const versePattern  = [0, -1, 2, -1, 4, -1, 2, -1, 3, -1, 2, -1, 1, -1, 0, -1];
+        const mamboPattern  = [4, 4, 5, 4, 7, -1, 5, 4, 2, 2, 4, 2, 5, 4, 2, 0];
+        const activePattern = (section === 'mambo' || section === 'coro') ? mamboPattern : versePattern;
+
+        const noteIndex = activePattern[step];
         if (noteIndex >= 0) {
-          const freq = scale[noteIndex % scale.length] * (track.genre === 'Bachata' ? 2 : 1);
-          const waveType = track.genre.includes('Merengue') || track.genre === 'Salsa Dura' ? 'sawtooth' : 'triangle';
-          playTone(now, freq, waveType, 0.16, lVol);
+          const octave = (hasRequinto || track.genre === 'Bachata') ? 2 : 1;
+          const freq = scale[noteIndex % scale.length] * octave;
+
+          if (hasBrass && (section === 'mambo' || section === 'coro')) {
+            playBrassStab(targetCtx, targetDest, now, freq, 0.17, lVol);
+          } else {
+            const waveType = hasAccordion ? 'sawtooth' : 'triangle';
+            playTone(targetCtx, targetDest, now, freq, waveType, 0.16, lVol, hasAccordion ? 2100 : 3000);
+          }
         }
       }
     }
 
-    function playDrumKick(time, gainVal, startFreq = 70) {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
+    function playDrumKick(ctx, dest, time, gainVal, startFreq = 72) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(startFreq * 1.8, time);
-      osc.frequency.exponentialRampToValueAtTime(38, time + 0.12);
+      osc.frequency.setValueAtTime(startFreq * 1.9, time);
+      osc.frequency.exponentialRampToValueAtTime(38, time + 0.13);
 
       gain.gain.setValueAtTime(gainVal, time);
-      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.16);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.18);
 
       osc.connect(gain);
-      gain.connect(masterGainNode);
+      gain.connect(dest);
       osc.start(time);
-      osc.stop(time + 0.17);
+      osc.stop(time + 0.19);
     }
 
-    function playPercussionSlap(time, gainVal) {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
+    function playPercussionSlap(ctx, dest, time, gainVal) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(320, time);
-      osc.frequency.exponentialRampToValueAtTime(110, time + 0.08);
+      osc.frequency.setValueAtTime(340, time);
+      osc.frequency.exponentialRampToValueAtTime(115, time + 0.075);
 
       gain.gain.setValueAtTime(gainVal, time);
-      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.09);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.085);
 
       osc.connect(gain);
-      gain.connect(masterGainNode);
+      gain.connect(dest);
       osc.start(time);
-      osc.stop(time + 0.1);
+      osc.stop(time + 0.09);
     }
 
-    function playGuiraScrape(time, gainVal) {
-      const bufferSize = audioCtx.sampleRate * 0.045;
-      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    function playGuiraScrape(ctx, dest, time, gainVal, duration = 0.045) {
+      const bufferSize = Math.max(1, Math.floor(ctx.sampleRate * duration));
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const data = buffer.getChannelData(0);
       for (let i = 0; i < bufferSize; i++) {
         data[i] = Math.random() * 2 - 1;
       }
 
-      const noise = audioCtx.createBufferSource();
+      const noise = ctx.createBufferSource();
       noise.buffer = buffer;
 
-      const filter = audioCtx.createBiquadFilter();
-      filter.type = 'highpass';
-      filter.frequency.value = 5500;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 6800;
+      filter.Q.value = 1.4;
 
-      const gain = audioCtx.createGain();
+      const gain = ctx.createGain();
       gain.gain.setValueAtTime(gainVal, time);
-      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.045);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
 
       noise.connect(filter);
       filter.connect(gain);
-      gain.connect(masterGainNode);
+      gain.connect(dest);
       noise.start(time);
     }
 
-    function playTone(time, freq, type, dur, gainVal) {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      const filter = audioCtx.createBiquadFilter();
+    function playBrassStab(ctx, dest, time, freq, dur, gainVal) {
+      [freq, freq * 1.25].forEach((f, idx) => {
+        const osc = ctx.createOscillator();
+        const filter = ctx.createBiquadFilter();
+        const gain = ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(f, time);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(650, time);
+        filter.frequency.exponentialRampToValueAtTime(2400, time + 0.04);
+        filter.frequency.exponentialRampToValueAtTime(1200, time + dur);
+
+        const v = idx === 0 ? gainVal : gainVal * 0.65;
+        gain.gain.setValueAtTime(0.001, time);
+        gain.gain.linearRampToValueAtTime(v, time + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(dest);
+
+        osc.start(time);
+        osc.stop(time + dur + 0.02);
+      });
+    }
+
+    function playTone(ctx, dest, time, freq, type, dur, gainVal, cutoff = 2600) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const filter = ctx.createBiquadFilter();
 
       osc.type = type;
       osc.frequency.setValueAtTime(freq, time);
 
       filter.type = 'lowpass';
-      filter.frequency.value = type === 'sawtooth' ? 1800 : 3200;
+      filter.frequency.value = cutoff;
 
       gain.gain.setValueAtTime(0.001, time);
       gain.gain.linearRampToValueAtTime(gainVal, time + 0.015);
@@ -1804,17 +1786,12 @@ De mi tierra linda, pura melodía
 
       osc.connect(filter);
       filter.connect(gain);
-      gain.connect(masterGainNode);
+      gain.connect(dest);
 
       osc.start(time);
       osc.stop(time + dur + 0.02);
     }
 
-    /**
-     * ============================================================================
-     * CONTROLES DEL ESTUDIO MULTIPISTA
-     * ============================================================================
-     */
     function updateStemVolume(stem, val) {
       stemState[stem].vol = val / 100;
       document.getElementById(`val-${stem}`).textContent = `${val}%`;
@@ -1846,11 +1823,6 @@ De mi tierra linda, pura melodía
       showToast('Niveles de consola multipista restablecidos.', 'info');
     }
 
-    /**
-     * ============================================================================
-     * VISUALIZADOR DE FRECUENCIAS EN CANVAS RESPONSIVO
-     * ============================================================================
-     */
     function initVisualizerCanvas() {
       const canvas = document.getElementById('visualizer-canvas');
       const ctx = canvas.getContext('2d');
@@ -1900,11 +1872,6 @@ De mi tierra linda, pura melodía
       draw();
     }
 
-    /**
-     * ============================================================================
-     * RENDERIZADO OFFLINE Y DESCARGA DE ARCHIVO WAV REAL
-     * ============================================================================
-     */
     function downloadCurrentTrackWAV() {
       if (!currentTrackId) return;
       downloadTrackWAVById(currentTrackId);
@@ -1917,46 +1884,25 @@ De mi tierra linda, pura melodía
       showToast(`Renderizando master WAV de "${track.title}"...`, 'info');
 
       try {
-        // Renderizar 8 segundos de muestra rítmica en OfflineAudioContext a 44.1kHz
         const sampleRate = 44100;
-        const renderSeconds = 8;
+        const renderSeconds = 24;
         const offlineCtx = new OfflineAudioContext(1, sampleRate * renderSeconds, sampleRate);
-        const preset = GENRE_PRESETS[track.genre] || GENRE_PRESETS['Merengue Típico'];
-        const scale = preset.scaleFreqs;
+
+        const compressor = offlineCtx.createDynamicsCompressor();
+        compressor.threshold.value = -12;
+        compressor.knee.value = 18;
+        compressor.ratio.value = 4;
+        compressor.attack.value = 0.005;
+        compressor.release.value = 0.15;
+        compressor.connect(offlineCtx.destination);
+
         const stepSec = 60 / track.bpm / 4;
         const totalSteps = Math.floor(renderSeconds / stepSec);
 
         for (let s = 0; s < totalSteps; s++) {
           const t = s * stepSec;
-          const stepMod = s % 16;
-
-          // Percusión
-          if (stepMod % 4 === 0) {
-            const osc = offlineCtx.createOscillator();
-            const g = offlineCtx.createGain();
-            osc.frequency.setValueAtTime(110, t);
-            osc.frequency.exponentialRampToValueAtTime(40, t + 0.12);
-            g.gain.setValueAtTime(0.4, t);
-            g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
-            osc.connect(g);
-            g.connect(offlineCtx.destination);
-            osc.start(t);
-            osc.stop(t + 0.16);
-          }
-
-          // Melodía y Bajo
-          if (stepMod % 2 === 0) {
-            const osc = offlineCtx.createOscillator();
-            const g = offlineCtx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(scale[(s / 2) % scale.length], t);
-            g.gain.setValueAtTime(0.18, t);
-            g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
-            osc.connect(g);
-            g.connect(offlineCtx.destination);
-            osc.start(t);
-            osc.stop(t + 0.2);
-          }
+          const progressRatio = s / totalSteps;
+          triggerSynthesizedStep(track, s % 16, offlineCtx, compressor, t, progressRatio);
         }
 
         const renderedBuffer = await offlineCtx.startRendering();
@@ -1971,7 +1917,7 @@ De mi tierra linda, pura melodía
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        showToast(`Archivo WAV descargado: ${track.title}`, 'success');
+        showToast(`Master WAV descargado: ${track.title}`, 'success');
       } catch (error) {
         console.error(error);
         showToast('No se pudo generar el archivo WAV en este navegador.', 'warn');
@@ -1991,19 +1937,18 @@ De mi tierra linda, pura melodía
       const setUint16 = (data) => { view.setUint16(pos, data, true); pos += 2; };
       const setUint32 = (data) => { view.setUint32(pos, data, true); pos += 4; };
 
-      // Cabecera RIFF WAVE
-      setUint32(0x46464952); // "RIFF"
+      setUint32(0x46464952);
       setUint32(length - 8);
-      setUint32(0x45564157); // "WAVE"
-      setUint32(0x20746d66); // "fmt "
+      setUint32(0x45564157);
+      setUint32(0x20746d66);
       setUint32(16);
-      setUint16(1); // PCM
+      setUint16(1);
       setUint16(numOfChan);
       setUint32(buffer.sampleRate);
       setUint32(buffer.sampleRate * 2 * numOfChan);
       setUint16(numOfChan * 2);
       setUint16(16);
-      setUint32(0x61746164); // "data"
+      setUint32(0x61746164);
       setUint32(length - pos - 4);
 
       for (let i = 0; i < buffer.numberOfChannels; i++) {
@@ -2023,15 +1968,10 @@ De mi tierra linda, pura melodía
       return new Blob([out], { type: 'audio/wav' });
     }
 
-    /**
-     * ============================================================================
-     * EXPORTACIONES (PROYECTO JSON, LETRA TXT Y GUION/PROMPT)
-     * ============================================================================
-     */
     function exportProjectJSON() {
       const projectData = {
         studio: 'BASA Universal AI Studio',
-        version: '10.4',
+        version: '10.5',
         exportedAt: new Date().toISOString(),
         activeModel: document.getElementById('ai-model-select').value,
         currentDraft: {
@@ -2087,7 +2027,6 @@ De mi tierra linda, pura melodía
 
       const script = `[BASA STUDIO PROMPT] Modelo: ${model} | Título: "${title}" | Género: ${genre} | ${bpm} BPM | Escala: ${key} | Voz: ${voice} | Instrumentación: ${Array.from(selectedInstruments).join(', ')}`;
 
-      // Uso de textarea temporal + execCommand('copy') para máxima compatibilidad en iframes
       const tempInput = document.createElement('textarea');
       tempInput.value = script;
       document.body.appendChild(tempInput);
@@ -2098,11 +2037,6 @@ De mi tierra linda, pura melodía
       showToast('Guion/Prompt copiado al portapapeles.', 'success');
     }
 
-    /**
-     * ============================================================================
-     * UTILIDADES: TAP TEMPO, FORMATO Y NOTIFICACIONES TOAST
-     * ============================================================================
-     */
     function handleTapTempo() {
       const now = Date.now();
       if (tapTimes.length > 0 && now - tapTimes[tapTimes.length - 1] > 2500) {
