@@ -1,464 +1,2170 @@
-import json
-import sqlite3
-from datetime import datetime
-from io import BytesIO
-from pathlib import Path
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BASA Universal AI Studio — Módulo de Producción Musical & Audio</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-import pandas as pd
-import streamlit as st
-import streamlit.components.v1 as components
-
-# -------------------------------------------------------------------
-# CONFIGURACIÓN DE PÁGINA Y ESTILOS BASA (ALTO CONTRASTE / TONOS SUAVES)
-# -------------------------------------------------------------------
-st.set_page_config(
-    page_title="BASA Universal AI Studio | Producción Musical",
-    page_icon="🎵",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
-st.markdown(
-    """
-    <style>
-        /* Fondo general gris suave y texto negro de alto contraste */
-        .stApp {
-            background-color: #f3f6f9;
-            color: #0f172a;
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            basaBg: '#F1F5F9',
+            basaCard: '#FFFFFF',
+            basaBorder: '#CBD5E1',
+            basaSkySoft: '#E0F2FE',
+            basaSkyMid: '#38BDF8',
+            basaSkyDark: '#0284C7',
+            basaText: '#0F172A',
+          }
         }
-        [data-testid="stSidebar"] {
-            background-color: #e6eef6;
-            border-right: 1px solid #cbd5e1;
+      }
+    }
+  </script>
+
+  <style>
+    /* Estilos base y scrollbar limpio para el entorno Studio */
+    body {
+      background-color: #F1F5F9;
+      color: #0F172A;
+      font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Scrollbars sutiles */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #F1F5F9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94A3B8;
+    }
+
+    /* Range inputs personalizados */
+    input[type="range"] {
+      -webkit-appearance: none;
+      background: transparent;
+    }
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 6px;
+      background: #E0F2FE;
+      border: 1px solid #BAE6FD;
+      border-radius: 9999px;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 16px;
+      width: 16px;
+      border-radius: 50%;
+      background: #0284C7;
+      border: 2px solid #FFFFFF;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.3);
+      margin-top: -6px;
+      cursor: pointer;
+    }
+
+    @keyframes pulseSoft {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.45; }
+    }
+    .animate-pulse-soft {
+      animation: pulseSoft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[#F1F5F9] text-[#0F172A] overflow-x-hidden">
+
+  <!-- NOTIFICACIÓN TOAST FLOTANTE (Reemplaza alert/confirm) -->
+  <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4 sm:px-0"></div>
+
+  <!-- 1. BARRA SUPERIOR (HEADER) -->
+  <header class="bg-white border-b border-[#CBD5E1] sticky top-0 z-30 shadow-xs">
+    <div class="max-w-[1600px] mx-auto px-3 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-3">
+      
+      <!-- Branding y Estado del Motor -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-[#E0F2FE] border border-[#38BDF8] flex items-center justify-center text-[#0284C7] shadow-xs shrink-0">
+          <i class="fa-solid fa-wave-square text-lg"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-extrabold text-base sm:text-lg tracking-tight text-black leading-none">
+              BASA Universal Studio
+            </h1>
+            <span class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#E0F2FE] text-[#0284C7] border border-[#BAE6FD]">
+              <span class="w-2 h-2 rounded-full bg-[#0284C7] animate-pulse-soft"></span>
+              Motor WebAudio Activo
+            </span>
+          </div>
+          <p class="text-xs text-slate-600 font-medium mt-0.5">Módulo de Producción Musical &amp; Síntesis IA</p>
+        </div>
+      </div>
+
+      <!-- Selector de Modelo IA y Botones de Exportación -->
+      <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+        <!-- Selector Modelo IA -->
+        <div class="flex items-center gap-2 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl px-2.5 py-1.5">
+          <i class="fa-solid fa-microchip text-[#0284C7] text-xs"></i>
+          <label for="ai-model-select" class="text-xs font-semibold text-slate-700 hidden md:inline">Motor IA:</label>
+          <select id="ai-model-select" onchange="updateModelBadge()" class="bg-transparent text-xs sm:text-sm font-bold text-black focus:outline-none cursor-pointer">
+            <option value="BASA-Audio-V10 Pro">BASA-Audio-V10 Pro</option>
+            <option value="BASA-Típico-Engine">BASA-Típico-Engine (RD/Caribe)</option>
+            <option value="BASA-Vocal-Master">BASA-Vocal-Master HD</option>
+            <option value="BASA-Acústico-Bolero">BASA-Acústico-Bolero</option>
+          </select>
+        </div>
+
+        <!-- Botones de Exportación -->
+        <div class="flex items-center gap-1.5">
+          <button onclick="exportProjectJSON()" title="Exportar Proyecto Completo JSON" class="px-2.5 py-1.5 rounded-xl bg-white hover:bg-[#E0F2FE] text-black border border-[#CBD5E1] hover:border-[#38BDF8] text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-file-code text-[#0284C7]"></i>
+            <span class="hidden lg:inline">Proyecto JSON</span>
+          </button>
+          <button onclick="downloadLyricsTXT()" title="Descargar Letra en TXT" class="px-2.5 py-1.5 rounded-xl bg-white hover:bg-[#E0F2FE] text-black border border-[#CBD5E1] hover:border-[#38BDF8] text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-file-lines text-[#0284C7]"></i>
+            <span class="hidden lg:inline">Letra TXT</span>
+          </button>
+          <button onclick="exportPromptScript()" title="Copiar Guion / Prompt de Producción" class="px-2.5 py-1.5 rounded-xl bg-[#E0F2FE] hover:bg-[#BAE6FD] text-[#0284C7] border border-[#38BDF8] text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-copy"></i>
+            <span>Guion/Prompt</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENEDOR PRINCIPAL DEL ESTUDIO -->
+  <div class="flex-1 max-w-[1600px] w-full mx-auto flex flex-col lg:flex-row gap-4 p-3 sm:p-4 pb-36">
+    
+    <!-- 2. BARRA DE NAVEGACIÓN LATERAL COMPACTA -->
+    <nav aria-label="Navegación del Estudio" class="bg-white border border-[#CBD5E1] rounded-2xl p-2 flex lg:flex-col justify-between lg:justify-start gap-1.5 lg:w-52 shrink-0 shadow-xs overflow-x-auto">
+      <button onclick="switchWorkspaceTab('home')" id="nav-home" class="nav-btn flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:bg-[#F1F5F9] transition whitespace-nowrap cursor-pointer">
+        <i class="fa-solid fa-house w-4 text-center text-slate-500"></i>
+        <span>Inicio</span>
+      </button>
+
+      <button onclick="switchWorkspaceTab('create')" id="nav-create" class="nav-btn flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-[#E0F2FE] text-[#0284C7] border border-[#BAE6FD] transition whitespace-nowrap cursor-pointer">
+        <i class="fa-solid fa-wand-magic-sparkles w-4 text-center text-[#0284C7]"></i>
+        <span>Crear Música</span>
+      </button>
+
+      <button onclick="switchWorkspaceTab('multitrack')" id="nav-multitrack" class="nav-btn flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:bg-[#F1F5F9] transition whitespace-nowrap cursor-pointer">
+        <i class="fa-solid fa-sliders w-4 text-center text-slate-500"></i>
+        <span>Estudio Multipista</span>
+      </button>
+
+      <button onclick="switchWorkspaceTab('library')" id="nav-library" class="nav-btn flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:bg-[#F1F5F9] transition whitespace-nowrap cursor-pointer">
+        <i class="fa-solid fa-compact-disc w-4 text-center text-slate-500"></i>
+        <span>Biblioteca BASA</span>
+        <span id="nav-lib-count" class="ml-auto px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-[#F1F5F9] text-slate-800 border border-[#CBD5E1]">3</span>
+      </button>
+
+      <button onclick="switchWorkspaceTab('tools')" id="nav-tools" class="nav-btn flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:bg-[#F1F5F9] transition whitespace-nowrap cursor-pointer">
+        <i class="fa-solid fa-toolbox w-4 text-center text-slate-500"></i>
+        <span>Herramientas Audio</span>
+      </button>
+
+      <!-- Tarjeta informativa en escritorio -->
+      <div class="hidden lg:block mt-auto pt-4 border-t border-[#E2E8F0]">
+        <div class="bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl p-3">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-bold text-black">Síntesis Local</span>
+            <span class="text-[11px] font-mono font-bold text-[#0284C7]">44.1 kHz</span>
+          </div>
+          <p class="text-[11px] text-slate-600 leading-relaxed">
+            Generación rítmica en tiempo real con motores de percusión caribeña y armonía MIDI-DSP.
+          </p>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ÁREA CENTRAL DINÁMICA (Vistas de Navegación + Panel de Creación) -->
+    <main class="flex-1 flex flex-col xl:flex-row gap-4 min-w-0">
+      
+      <!-- 3. PANEL DE CREACIÓN Y VISTAS SECUNDARIAS (IZQUIERDA/CENTRO) -->
+      <section id="primary-workspace" class="flex-1 bg-white border border-[#CBD5E1] rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col min-w-0">
+        
+        <!-- VISTA A: CREAR MÚSICA (MODOS AGENT, CUSTOM, REMIX) -->
+        <div id="view-create" class="workspace-view flex flex-col gap-4 h-full">
+          
+          <!-- Selector de Modos (Agent / Custom / Remix) -->
+          <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#E2E8F0]">
+            <div class="inline-flex p-1 bg-[#F1F5F9] border border-[#CBD5E1] rounded-xl w-full sm:w-auto">
+              <button onclick="setCreationMode('agent')" id="mode-btn-agent" class="mode-tab flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs sm:text-sm font-bold bg-white text-[#0284C7] shadow-xs border border-[#BAE6FD] transition cursor-pointer flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-robot"></i>
+                <span>Agent</span>
+              </button>
+              <button onclick="setCreationMode('custom')" id="mode-btn-custom" class="mode-tab flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold text-slate-700 hover:text-black transition cursor-pointer flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-sliders"></i>
+                <span>Custom</span>
+              </button>
+              <button onclick="setCreationMode('remix')" id="mode-btn-remix" class="mode-tab flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold text-slate-700 hover:text-black transition cursor-pointer flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-shuffle"></i>
+                <span>Remix</span>
+              </button>
+            </div>
+
+            <div class="flex items-center gap-2 text-xs text-slate-600">
+              <span class="font-semibold text-black">Modelo activo:</span>
+              <span id="active-model-label" class="px-2.5 py-1 rounded-lg bg-[#E0F2FE] text-[#0284C7] font-mono font-bold border border-[#BAE6FD]">BASA-Audio-V10 Pro</span>
+            </div>
+          </div>
+
+          <!-- SUB-PANEL 1: MODO AGENT (Asistente Creativo) -->
+          <div id="panel-agent" class="creation-panel flex flex-col gap-4">
+            <div class="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4">
+              <div class="flex items-center justify-between mb-2">
+                <label for="agent-idea-input" class="text-sm font-bold text-black flex items-center gap-2">
+                  <i class="fa-solid fa-sparkles text-[#0284C7]"></i>
+                  Describe tu idea musical, historia o ambiente
+                </label>
+                <span class="text-xs font-medium text-slate-500">Autocomposición IA</span>
+              </div>
+              <textarea id="agent-idea-input" rows="3" placeholder="Ej: Un merengue típico alegre con acordeón virtuoso y güira metálica sobre una fiesta en el Cibao al atardecer..." class="w-full rounded-xl border border-[#CBD5E1] bg-white p-3 text-sm text-black placeholder-slate-400 focus:outline-none focus:border-[#0284C7] focus:ring-2 focus:ring-[#E0F2FE] transition"></textarea>
+              
+              <!-- Chips de inspiración rápida -->
+              <div class="mt-3">
+                <span class="text-xs font-semibold text-slate-600 block mb-1.5">Ideas rápidas dominicanas y latinas:</span>
+                <div class="flex flex-wrap gap-1.5">
+                  <button type="button" onclick="fillAgentPrompt('Merengue típico cibaeño con acordeón rápido, tambora repicando y sabor a fiesta patronal')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-[#E0F2FE] border border-[#CBD5E1] text-xs font-medium text-black transition cursor-pointer">
+                    🪗 Merengue Típico Cibaeño
+                  </button>
+                  <button type="button" onclick="fillAgentPrompt('Bachata romántica de amargue con requinto cristalino, bongó suave y nostalgia bajo la lluvia en Santo Domingo')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-[#E0F2FE] border border-[#CBD5E1] text-xs font-medium text-black transition cursor-pointer">
+                    🎸 Bachata Rosa &amp; Requinto
+                  </button>
+                  <button type="button" onclick="fillAgentPrompt('Salsa dura de barrio con trombones potentes, piano montuno, timbal y coro callejero')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-[#E0F2FE] border border-[#CBD5E1] text-xs font-medium text-black transition cursor-pointer">
+                    🎺 Salsa Dura &amp; Montuno
+                  </button>
+                  <button type="button" onclick="fillAgentPrompt('Dembow dominicano energético con bajo 808 pesado, percusión sincopada y coro viral')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-[#E0F2FE] border border-[#CBD5E1] text-xs font-medium text-black transition cursor-pointer">
+                    🔊 Dembow Urbano RD
+                  </button>
+                  <button type="button" onclick="fillAgentPrompt('Bolero clásico bohemio con guitarras acústicas, contrabajo y poesía nocturna')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-[#E0F2FE] border border-[#CBD5E1] text-xs font-medium text-black transition cursor-pointer">
+                    🌙 Bolero Bohemio
+                  </button>
+                </div>
+              </div>
+
+              <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                  <label for="agent-genre-hint" class="text-xs font-bold text-slate-700">Género base:</label>
+                  <select id="agent-genre-hint" class="rounded-xl border border-[#CBD5E1] bg-white px-3 py-1.5 text-xs font-bold text-black focus:outline-none focus:border-[#0284C7]">
+                    <option value="auto">Detectar automáticamente</option>
+                    <option value="Merengue Típico">Merengue Típico</option>
+                    <option value="Bachata">Bachata</option>
+                    <option value="Bolero">Bolero</option>
+                    <option value="Salsa Dura">Salsa Dura</option>
+                    <option value="Merengue de Calle">Merengue de Calle</option>
+                    <option value="Dembow">Dembow</option>
+                    <option value="Ranchera">Ranchera</option>
+                  </select>
+                </div>
+
+                <button type="button" onclick="runAgentComposer()" class="px-4 py-2.5 rounded-xl bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs sm:text-sm font-bold shadow-xs transition flex items-center gap-2 cursor-pointer">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i>
+                  <span>Generar Estructura &amp; Letra en Editor</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Vista previa rápida de lo que el Agent enviará al estudio -->
+            <div class="bg-white border border-[#CBD5E1] rounded-2xl p-4 flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Flujo Inteligente BASA Agent</h3>
+                <span class="text-xs font-semibold text-[#0284C7]">Sincronizado con Modo Custom</span>
+              </div>
+              <p class="text-xs sm:text-sm text-slate-700">
+                El asistente redacta la letra con etiquetas estructurales (<code class="px-1.5 py-0.5 bg-[#F1F5F9] rounded text-black font-mono text-xs">[Intro]</code>, <code class="px-1.5 py-0.5 bg-[#F1F5F9] rounded text-black font-mono text-xs">[Verso]</code>, <code class="px-1.5 py-0.5 bg-[#F1F5F9] rounded text-black font-mono text-xs">[Coro]</code>, <code class="px-1.5 py-0.5 bg-[#F1F5F9] rounded text-black font-mono text-xs">[Mambo]</code>, <code class="px-1.5 py-0.5 bg-[#F1F5F9] rounded text-black font-mono text-xs">[Outro]</code>), ajusta el BPM óptimo y selecciona los instrumentos tradicionales correspondientes.
+              </p>
+            </div>
+          </div>
+
+          <!-- SUB-PANEL 2: MODO CUSTOM (Editor Completo) -->
+          <div id="panel-custom" class="creation-panel hidden flex-col gap-4">
+            
+            <!-- Título y Género -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label for="track-title" class="block text-xs font-bold text-black mb-1">Título de la Obra</label>
+                <input type="text" id="track-title" value="Brisa del Cibao en Abril" placeholder="Escribe el título de tu canción..." class="w-full rounded-xl border border-[#CBD5E1] bg-white px-3.5 py-2 text-sm font-semibold text-black focus:outline-none focus:border-[#0284C7] focus:ring-2 focus:ring-[#E0F2FE]">
+              </div>
+              <div>
+                <label for="track-genre" class="block text-xs font-bold text-black mb-1">Género / Ritmo Principal</label>
+                <select id="track-genre" onchange="applyGenreDefaults()" class="w-full rounded-xl border border-[#CBD5E1] bg-white px-3.5 py-2 text-sm font-bold text-black focus:outline-none focus:border-[#0284C7] focus:ring-2 focus:ring-[#E0F2FE]">
+                  <option value="Merengue Típico">Merengue Típico (Perico Ripiao)</option>
+                  <option value="Bachata">Bachata (Tradicional / Moderna)</option>
+                  <option value="Bolero">Bolero (Clásico / Filin)</option>
+                  <option value="Salsa Dura">Salsa Dura (Brava / Montuno)</option>
+                  <option value="Merengue de Calle">Merengue de Calle (Urbano)</option>
+                  <option value="Dembow">Dembow (Dominicano 808)</option>
+                  <option value="Ranchera">Ranchera (Mariachi / Norteña)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Editor de Letra con Etiquetas Estructurales -->
+            <div class="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-3">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <label for="track-lyrics" class="text-xs font-bold text-black flex items-center gap-1.5">
+                  <i class="fa-solid fa-align-left text-[#0284C7]"></i>
+                  Letra y Estructura Musical
+                </label>
+                <div class="flex flex-wrap items-center gap-1">
+                  <button type="button" onclick="insertTag('[Intro]')" class="px-2 py-1 rounded-lg bg-white hover:bg-[#E0F2FE] border border-[#CBD5E1] text-[11px] font-mono font-bold text-black cursor-pointer">+ [Intro]</button>
+                  <button type="button" onclick="insertTag('[Verso]')" class="px-2 py-1 rounded-lg bg-white hover:bg-[#E0F2FE] border border-[#CBD5E1] text-[11px] font-mono font-bold text-black cursor-pointer">+ [Verso]</button>
+                  <button type="button" onclick="insertTag('[Coro]')" class="px-2 py-1 rounded-lg bg-white hover:bg-[#E0F2FE] border border-[#CBD5E1] text-[11px] font-mono font-bold text-black cursor-pointer">+ [Coro]</button>
+                  <button type="button" onclick="insertTag('[Mambo]')" class="px-2 py-1 rounded-lg bg-[#E0F2FE] hover:bg-[#BAE6FD] border border-[#38BDF8] text-[11px] font-mono font-bold text-[#0284C7] cursor-pointer">+ [Mambo]</button>
+                  <button type="button" onclick="insertTag('[Requinto Solo]')" class="px-2 py-1 rounded-lg bg-white hover:bg-[#E0F2FE] border border-[#CBD5E1] text-[11px] font-mono font-bold text-black cursor-pointer">+ [Requinto]</button>
+                  <button type="button" onclick="insertTag('[Outro]')" class="px-2 py-1 rounded-lg bg-white hover:bg-[#E0F2FE] border border-[#CBD5E1] text-[11px] font-mono font-bold text-black cursor-pointer">+ [Outro]</button>
+                </div>
+              </div>
+              <textarea id="track-lyrics" rows="7" class="w-full rounded-xl border border-[#CBD5E1] bg-white p-3 text-xs sm:text-sm font-mono text-black leading-relaxed focus:outline-none focus:border-[#0284C7] focus:ring-2 focus:ring-[#E0F2FE]">[Intro]
+(Repique de tambora y rasgueo brillante de güira metálica)
+
+[Verso]
+Cuando cae la tarde sobre la loma verde
+Suena el acordeón llamando al corazón
+No hay pena que dure cuando el ritmo enciende
+La fiesta del pueblo con pura tradición
+
+[Coro]
+¡Baila mi gente, que llegó el sabor!
+Con tambora y güira se alegra el alma mía
+BASA en el estudio marcando el compás
+De mi tierra linda, pura melodía
+
+[Mambo]
+(Solo virtuoso de acordeón con corte rítmico de saxofón y tambora)
+
+[Outro]
+(Cierre en seco con redoble de tambora y acorde mayor)</textarea>
+            </div>
+
+            <!-- Instrumentación Clave (Multi-selección) -->
+            <div>
+              <span class="block text-xs font-bold text-black mb-1.5">Instrumentación Clave del Arreglo</span>
+              <div id="instruments-container" class="flex flex-wrap gap-2">
+                <!-- Se renderizan dinámicamente con JS -->
+              </div>
+            </div>
+
+            <!-- Tipo de Voz, Tonalidad, BPM y Duración -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-3">
+              <div>
+                <label for="track-voice" class="block text-xs font-bold text-black mb-1">Tipo de Voz</label>
+                <select id="track-voice" class="w-full rounded-xl border border-[#CBD5E1] bg-white px-2.5 py-1.5 text-xs font-semibold text-black focus:outline-none focus:border-[#0284C7]">
+                  <option value="Voz Masculina Cálida">Masculina Cálida</option>
+                  <option value="Voz Femenina Melódica">Femenina Melódica</option>
+                  <option value="Dúo Tropical Armonizado">Dúo Tropical</option>
+                  <option value="Coro Callejero / Pregón">Coro / Pregón</option>
+                  <option value="Solo Instrumental (Sin Voz)">Solo Instrumental</option>
+                </select>
+              </div>
+
+              <div>
+                <label for="track-key" class="block text-xs font-bold text-black mb-1">Tonalidad / Escala</label>
+                <select id="track-key" class="w-full rounded-xl border border-[#CBD5E1] bg-white px-2.5 py-1.5 text-xs font-semibold text-black focus:outline-none focus:border-[#0284C7]">
+                  <option value="Am">La Menor (Am)</option>
+                  <option value="C">Do Mayor (C)</option>
+                  <option value="G">Sol Mayor (G)</option>
+                  <option value="Dm">Re Menor (Dm)</option>
+                  <option value="F">Fa Mayor (F)</option>
+                  <option value="Em">Mi Menor (Em)</option>
+                </select>
+              </div>
+
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label for="track-bpm" class="text-xs font-bold text-black">Tempo (BPM)</label>
+                  <span id="bpm-display" class="text-xs font-mono font-bold text-[#0284C7] bg-[#E0F2FE] px-1.5 py-0.5 rounded">138 BPM</span>
+                </div>
+                <input type="range" id="track-bpm" min="65" max="175" value="138" oninput="updateRangeLabels()" class="w-full">
+              </div>
+
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label for="track-duration" class="text-xs font-bold text-black">Duración</label>
+                  <span id="duration-display" class="text-xs font-mono font-bold text-[#0284C7] bg-[#E0F2FE] px-1.5 py-0.5 rounded">02:45</span>
+                </div>
+                <input type="range" id="track-duration" min="45" max="240" step="15" value="165" oninput="updateRangeLabels()" class="w-full">
+              </div>
+            </div>
+          </div>
+
+          <!-- SUB-PANEL 3: MODO REMIX -->
+          <div id="panel-remix" class="creation-panel hidden flex-col gap-4">
+            <div class="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4 flex flex-col gap-3">
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold text-black flex items-center gap-2">
+                  <i class="fa-solid fa-shuffle text-[#0284C7]"></i>
+                  Motor de Reinterpretación y Fusión de Géneros
+                </h3>
+                <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#E0F2FE] text-[#0284C7]">Remix IA</span>
+              </div>
+              <p class="text-xs text-slate-600">
+                Selecciona una pista existente de tu Biblioteca BASA para transformar su género, alterar su velocidad (BPM) o fusionar su arreglo instrumental conservando la esencia melódica.
+              </p>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
+                <div>
+                  <label for="remix-source-select" class="block text-xs font-bold text-black mb-1">1. Pista Origen (Biblioteca BASA)</label>
+                  <select id="remix-source-select" onchange="loadRemixSourcePreview()" class="w-full rounded-xl border border-[#CBD5E1] bg-white px-3 py-2 text-xs sm:text-sm font-bold text-black focus:outline-none focus:border-[#0284C7]"></select>
+                </div>
+
+                <div>
+                  <label for="remix-target-genre" class="block text-xs font-bold text-black mb-1">2. Nuevo Género / Fusión Destino</label>
+                  <select id="remix-target-genre" class="w-full rounded-xl border border-[#CBD5E1] bg-white px-3 py-2 text-xs sm:text-sm font-bold text-black focus:outline-none focus:border-[#0284C7]">
+                    <option value="Merengue de Calle">Fusión Merengue de Calle (Mambo Urbano)</option>
+                    <option value="Bachata">Versión Bachata Moderna (Requinto &amp; Bongó)</option>
+                    <option value="Dembow">Remix Dembow 808 (Club Edit)</option>
+                    <option value="Salsa Dura">Arreglo Salsa Dura (Metales &amp; Piano)</option>
+                    <option value="Merengue Típico">Versión Típica (Acordeón &amp; Tambora)</option>
+                    <option value="Bolero">Versión Acústica Bolero Lento</option>
+                    <option value="Ranchera">Adaptación Ranchera</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white border border-[#CBD5E1] rounded-xl p-3">
+                <div>
+                  <div class="flex justify-between text-xs font-bold mb-1">
+                    <span class="text-black">Ajuste de Tempo Remix</span>
+                    <span id="remix-bpm-label" class="font-mono text-[#0284C7]">128 BPM</span>
+                  </div>
+                  <input type="range" id="remix-bpm-slider" min="70" max="175" value="128" oninput="document.getElementById('remix-bpm-label').textContent = this.value + ' BPM'" class="w-full">
+                </div>
+                <div>
+                  <div class="flex justify-between text-xs font-bold mb-1">
+                    <span class="text-black">Intensidad de Re-armonización</span>
+                    <span id="remix-intensity-label" class="font-mono text-[#0284C7]">65%</span>
+                  </div>
+                  <input type="range" id="remix-intensity-slider" min="15" max="100" value="65" oninput="document.getElementById('remix-intensity-label').textContent = this.value + '%'" class="w-full">
+                </div>
+              </div>
+
+              <div id="remix-source-card" class="bg-white border border-[#CBD5E1] rounded-xl p-3 text-xs text-slate-700">
+                <!-- Detalles cargados dinámicamente -->
+              </div>
+
+              <div class="flex justify-end">
+                <button type="button" onclick="generateRemixTrack()" class="px-5 py-2.5 rounded-xl bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs sm:text-sm font-bold shadow-xs transition flex items-center gap-2 cursor-pointer">
+                  <i class="fa-solid fa-bolt"></i>
+                  <span>Renderizar Remix en Biblioteca</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- BOTÓN PRINCIPAL DE GENERACIÓN (Siempre accesible en Crear Música) -->
+          <div id="main-generate-footer" class="mt-auto pt-3 border-t border-[#E2E8F0] flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2 text-xs text-slate-600">
+              <i class="fa-solid fa-shield-halved text-[#0284C7]"></i>
+              <span>Masterización automática y generación de pista lista para descargar en <strong>WAV 16-bit</strong>.</span>
+            </div>
+            <button type="button" id="btn-generate-master" onclick="generateNewTrack()" class="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#0284C7] hover:bg-[#0369A1] active:scale-[0.99] text-white font-extrabold text-sm shadow-sm transition flex items-center justify-center gap-2.5 cursor-pointer">
+              <i class="fa-solid fa-play"></i>
+              <span>Producir Pista con BASA AI</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- VISTA B: INICIO (RESUMEN DEL ESTUDIO) -->
+        <div id="view-home" class="workspace-view hidden flex-col gap-4">
+          <div class="bg-[#E0F2FE] border border-[#BAE6FD] rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <span class="inline-block px-2.5 py-0.5 rounded-full bg-white text-[#0284C7] text-xs font-bold mb-2">BASA Universal Studio v10.4</span>
+              <h2 class="text-xl sm:text-2xl font-extrabold text-black tracking-tight">Tu Estudio de Producción Musical Caribeña y Latina</h2>
+              <p class="text-xs sm:text-sm text-slate-800 mt-1 max-w-2xl">
+                Compone letras estructuradas, diseña arreglos con güira, tambora, acordeón y requinto, y previsualiza cada ritmo en tiempo real con síntesis Web Audio API.
+              </p>
+            </div>
+            <button onclick="switchWorkspaceTab('create')" class="px-5 py-2.5 rounded-xl bg-[#0284C7] text-white text-xs sm:text-sm font-bold hover:bg-[#0369A1] transition shrink-0 cursor-pointer">
+              Ir al Compositor →
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4">
+              <div class="w-9 h-9 rounded-xl bg-[#E0F2FE] text-[#0284C7] flex items-center justify-center mb-2.5">
+                <i class="fa-solid fa-robot"></i>
+              </div>
+              <h3 class="font-bold text-sm text-black">1. Asistente Agent</h3>
+              <p class="text-xs text-slate-600 mt-1">Transforma una frase corta en una letra completa con secciones [Verso], [Coro] y [Mambo].</p>
+            </div>
+            <div class="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4">
+              <div class="w-9 h-9 rounded-xl bg-[#E0F2FE] text-[#0284C7] flex items-center justify-center mb-2.5">
+                <i class="fa-solid fa-drum"></i>
+              </div>
+              <h3 class="font-bold text-sm text-black">2. Motor Rítmico Real</h3>
+              <p class="text-xs text-slate-600 mt-1">Patrones auténticos de Merengue, Bachata, Salsa, Dembow, Bolero y Ranchera sintetizados al instante.</p>
+            </div>
+            <div class="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4">
+              <div class="w-9 h-9 rounded-xl bg-[#E0F2FE] text-[#0284C7] flex items-center justify-center mb-2.5">
+                <i class="fa-solid fa-file-audio"></i>
+              </div>
+              <h3 class="font-bold text-sm text-black">3. Exportación WAV &amp; JSON</h3>
+              <p class="text-xs text-slate-600 mt-1">Descarga el audio sintetizado en formato WAV real o guarda la sesión completa de tu proyecto.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- VISTA C: ESTUDIO MULTIPISTA (MEZCLADOR DE STEMS EN TIEMPO REAL) -->
+        <div id="view-multitrack" class="workspace-view hidden flex-col gap-4">
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#E2E8F0]">
+            <div>
+              <h2 class="text-base sm:text-lg font-extrabold text-black">Consola Multipista &amp; Balance de Stems</h2>
+              <p class="text-xs text-slate-600">Controla en vivo los canales del sintetizador Web Audio durante la reproducción.</p>
+            </div>
+            <button onclick="resetMixerStems()" class="px-3 py-1.5 rounded-xl bg-[#F1F5F9] hover:bg-[#E0F2FE] text-xs font-bold text-black border border-[#CBD5E1] cursor-pointer">
+              Restablecer Mezcla
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" id="mixer-channels">
+            <!-- Canal 1: Percusión / Güira & Tambora -->
+            <div class="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4 flex flex-col gap-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-extrabold text-black flex items-center gap-1.5">
+                  <i class="fa-solid fa-drum text-[#0284C7]"></i> Percusión / Güira
+                </span>
+                <button onclick="toggleMuteStem('perc')" id="mute-perc" class="px-2 py-0.5 rounded text-[11px] font-bold bg-white border border-[#CBD5E1] text-slate-700 cursor-pointer">ON</button>
+              </div>
+              <input type="range" id="vol-perc" min="0" max="100" value="85" oninput="updateStemVolume('perc', this.value)" class="w-full">
+              <div class="flex justify-between text-[11px] font-mono text-slate-600">
+                <span>Canal 01</span>
+                <span id="val-perc">85%</span>
+              </div>
+            </div>
+
+            <!-- Canal 2: Bajo / Tumbao -->
+            <div class="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4 flex flex-col gap-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-extrabold text-black flex items-center gap-1.5">
+                  <i class="fa-solid fa-wave-square text-[#0284C7]"></i> Bajo / Tumbao
+                </span>
+                <button onclick="toggleMuteStem('bass')" id="mute-bass" class="px-2 py-0.5 rounded text-[11px] font-bold bg-white border border-[#CBD5E1] text-slate-700 cursor-pointer">ON</button>
+              </div>
+              <input type="range" id="vol-bass" min="0" max="100" value="90" oninput="updateStemVolume('bass', this.value)" class="w-full">
+              <div class="flex justify-between text-[11px] font-mono text-slate-600">
+                <span>Canal 02</span>
+                <span id="val-bass">90%</span>
+              </div>
+            </div>
+
+            <!-- Canal 3: Armonía / Piano & Guitarra -->
+            <div class="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4 flex flex-col gap-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-extrabold text-black flex items-center gap-1.5">
+                  <i class="fa-solid fa-guitar text-[#0284C7]"></i> Armonía / Requinto
+                </span>
+                <button onclick="toggleMuteStem('chord')" id="mute-chord" class="px-2 py-0.5 rounded text-[11px] font-bold bg-white border border-[#CBD5E1] text-slate-700 cursor-pointer">ON</button>
+              </div>
+              <input type="range" id="vol-chord" min="0" max="100" value="75" oninput="updateStemVolume('chord', this.value)" class="w-full">
+              <div class="flex justify-between text-[11px] font-mono text-slate-600">
+                <span>Canal 03</span>
+                <span id="val-chord">75%</span>
+              </div>
+            </div>
+
+            <!-- Canal 4: Melodía Líder / Acordeón / Voz -->
+            <div class="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4 flex flex-col gap-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-extrabold text-black flex items-center gap-1.5">
+                  <i class="fa-solid fa-microphone-lines text-[#0284C7]"></i> Melodía / Acordeón
+                </span>
+                <button onclick="toggleMuteStem('lead')" id="mute-lead" class="px-2 py-0.5 rounded text-[11px] font-bold bg-white border border-[#CBD5E1] text-slate-700 cursor-pointer">ON</button>
+              </div>
+              <input type="range" id="vol-lead" min="0" max="100" value="80" oninput="updateStemVolume('lead', this.value)" class="w-full">
+              <div class="flex justify-between text-[11px] font-mono text-slate-600">
+                <span>Canal 04</span>
+                <span id="val-lead">80%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-[#E0F2FE]/60 border border-[#BAE6FD] rounded-xl p-3 flex items-center justify-between text-xs">
+            <span class="font-semibold text-black">Sugerencia: Inicia la reproducción de cualquier pista de la biblioteca para escuchar los cambios en la mezcla en tiempo real.</span>
+            <button onclick="togglePlayCurrent()" class="px-3 py-1.5 rounded-lg bg-[#0284C7] text-white font-bold shrink-0 cursor-pointer">
+              Play / Pausa
+            </button>
+          </div>
+        </div>
+
+        <!-- VISTA D: HERRAMIENTAS DE AUDIO -->
+        <div id="view-tools" class="workspace-view hidden flex-col gap-4">
+          <div class="pb-3 border-b border-[#E2E8F0]">
+            <h2 class="text-base sm:text-lg font-extrabold text-black">Herramientas de Estudio &amp; Utilitarios DSP</h2>
+            <p class="text-xs text-slate-600">Utilidades rápidas para productores, compositores y arreglistas.</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Tap Tempo -->
+            <div class="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4 flex flex-col justify-between gap-3">
+              <div>
+                <h3 class="text-sm font-bold text-black flex items-center gap-2">
+                  <i class="fa-solid fa-hand-pointer text-[#0284C7]"></i>
+                  Detector Tap-Tempo Manual
+                </h3>
+                <p class="text-xs text-slate-600 mt-1">Pulsa el botón al ritmo de tu canción para calcular el BPM exacto y aplicarlo al editor.</p>
+              </div>
+              <div class="flex items-center justify-between bg-white border border-[#CBD5E1] rounded-xl p-3">
+                <div>
+                  <span class="text-xs text-slate-500 block">BPM Detectado</span>
+                  <span id="tap-bpm-result" class="text-2xl font-mono font-extrabold text-[#0284C7]">120</span>
+                </div>
+                <div class="flex gap-2">
+                  <button onclick="handleTapTempo()" class="px-4 py-2.5 rounded-xl bg-[#E0F2FE] hover:bg-[#BAE6FD] text-[#0284C7] border border-[#38BDF8] font-extrabold text-xs cursor-pointer">
+                    TAP RITMO
+                  </button>
+                  <button onclick="applyTappedBpm()" class="px-3 py-2.5 rounded-xl bg-[#0284C7] text-white font-bold text-xs cursor-pointer">
+                    Usar BPM
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Generador de Progresiones de Acordes -->
+            <div class="bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl p-4 flex flex-col justify-between gap-3">
+              <div>
+                <h3 class="text-sm font-bold text-black flex items-center gap-2">
+                  <i class="fa-solid fa-music text-[#0284C7]"></i>
+                  Progresiones Armónicas por Género
+                </h3>
+                <p class="text-xs text-slate-600 mt-1">Consulta cadencias clásicas listas para tus composiciones.</p>
+              </div>
+              <div class="bg-white border border-[#CBD5E1] rounded-xl p-3 text-xs space-y-1.5">
+                <div class="flex justify-between"><span class="font-bold text-black">Merengue Típico:</span><span class="font-mono text-[#0284C7]">I - V7 - V7 - I (Am - E7)</span></div>
+                <div class="flex justify-between"><span class="font-bold text-black">Bachata Clásica:</span><span class="font-mono text-[#0284C7]">i - VI - III - VII (Am - F - C - G)</span></div>
+                <div class="flex justify-between"><span class="font-bold text-black">Salsa Montuno:</span><span class="font-mono text-[#0284C7]">ii7 - V7 - Imaj7 (Dm7 - G7 - C)</span></div>
+                <div class="flex justify-between"><span class="font-bold text-black">Bolero Tradicional:</span><span class="font-mono text-[#0284C7]">I - vi - ii7 - V7</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- 4. PANEL DE BIBLIOTECA BASA (DERECHA) -->
+      <aside id="library-panel" class="w-full xl:w-[420px] shrink-0 bg-white border border-[#CBD5E1] rounded-2xl p-4 shadow-xs flex flex-col gap-3">
+        <div class="flex items-center justify-between pb-2.5 border-b border-[#E2E8F0]">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-compact-disc text-[#0284C7]"></i>
+            <h2 class="text-sm sm:text-base font-extrabold text-black">Biblioteca BASA</h2>
+            <span id="library-total-badge" class="px-2 py-0.5 rounded-full text-xs font-bold bg-[#E0F2FE] text-[#0284C7]">3 pistas</span>
+          </div>
+          <button onclick="resetDemoLibrary()" title="Restaurar pistas de ejemplo" class="text-xs font-semibold text-slate-600 hover:text-[#0284C7] transition cursor-pointer">
+            <i class="fa-solid fa-rotate-right mr-1"></i>Restaurar
+          </button>
+        </div>
+
+        <!-- Buscador rápido en biblioteca -->
+        <div class="relative">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+          <input type="text" id="library-search" oninput="renderLibrary()" placeholder="Filtrar por título, género o instrumento..." class="w-full pl-8 pr-3 py-2 rounded-xl border border-[#CBD5E1] bg-[#F8FAFC] text-xs font-medium text-black placeholder-slate-400 focus:outline-none focus:border-[#0284C7] focus:bg-white">
+        </div>
+
+        <!-- Lista de Pistas Generadas -->
+        <div id="library-list" class="flex flex-col gap-2.5 overflow-y-auto max-h-[540px] pr-0.5">
+          <!-- Renderizado dinámico por JS -->
+        </div>
+      </aside>
+
+    </main>
+  </div>
+
+  <!-- REPRODUCTOR INFERIOR PERSISTENTE CON VISUALIZADOR WEB AUDIO API -->
+  <footer class="fixed bottom-0 inset-x-0 z-40 bg-white border-t border-[#CBD5E1] shadow-lg">
+    <div class="max-w-[1600px] mx-auto px-3 sm:px-5 py-2.5 flex flex-col md:flex-row items-center justify-between gap-3">
+      
+      <!-- Info de Pista Actual -->
+      <div class="flex items-center gap-3 w-full md:w-1/3 min-w-0">
+        <div id="player-cover-mini" class="w-11 h-11 rounded-xl border border-[#CBD5E1] overflow-hidden shrink-0 bg-[#E0F2FE] flex items-center justify-center">
+          <!-- Carátula SVG dinámica -->
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2">
+            <h4 id="player-track-title" class="text-xs sm:text-sm font-extrabold text-black truncate">Selecciona o produce una pista</h4>
+            <span id="player-genre-badge" class="hidden sm:inline-block px-2 py-0.5 rounded-md bg-[#E0F2FE] text-[#0284C7] text-[10px] font-bold shrink-0">Merengue Típico</span>
+          </div>
+          <p id="player-track-meta" class="text-[11px] text-slate-600 truncate">138 BPM • Tonalidad Am • Síntesis BASA WebAudio</p>
+        </div>
+      </div>
+
+      <!-- Controles de Transporte y Barra de Progreso -->
+      <div class="flex flex-col items-center gap-1.5 w-full md:w-1/3">
+        <div class="flex items-center gap-4">
+          <button onclick="playPreviousTrack()" title="Pista Anterior" class="w-8 h-8 rounded-full hover:bg-[#F1F5F9] text-slate-700 hover:text-black flex items-center justify-center transition cursor-pointer">
+            <i class="fa-solid fa-backward-step text-sm"></i>
+          </button>
+          <button onclick="togglePlayCurrent()" id="main-play-btn" title="Reproducir / Pausar" class="w-10 h-10 rounded-full bg-[#0284C7] hover:bg-[#0369A1] text-white flex items-center justify-center shadow-sm transition cursor-pointer">
+            <i id="main-play-icon" class="fa-solid fa-play text-sm ml-0.5"></i>
+          </button>
+          <button onclick="stopPlayback()" title="Detener" class="w-8 h-8 rounded-full hover:bg-[#F1F5F9] text-slate-700 hover:text-black flex items-center justify-center transition cursor-pointer">
+            <i class="fa-solid fa-stop text-xs"></i>
+          </button>
+          <button onclick="playNextTrack()" title="Siguiente Pista" class="w-8 h-8 rounded-full hover:bg-[#F1F5F9] text-slate-700 hover:text-black flex items-center justify-center transition cursor-pointer">
+            <i class="fa-solid fa-forward-step text-sm"></i>
+          </button>
+        </div>
+
+        <div class="w-full flex items-center gap-2 text-[11px] font-mono text-slate-600">
+          <span id="player-time-current">00:00</span>
+          <div class="flex-1 h-2 bg-[#F1F5F9] border border-[#CBD5E1] rounded-full overflow-hidden cursor-pointer" onclick="seekPlayback(event)">
+            <div id="player-progress-bar" class="h-full bg-[#0284C7] w-0 transition-all duration-150"></div>
+          </div>
+          <span id="player-time-total">02:45</span>
+        </div>
+      </div>
+
+      <!-- Visualizador de Frecuencias Real + Volumen Master + Descarga WAV -->
+      <div class="flex items-center justify-between md:justify-end gap-3 w-full md:w-1/3">
+        <div class="flex-1 md:flex-initial w-36 sm:w-44 h-10 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl p-1 overflow-hidden">
+          <canvas id="visualizer-canvas" class="w-full h-full block"></canvas>
+        </div>
+
+        <div class="hidden sm:flex items-center gap-1.5">
+          <i class="fa-solid fa-volume-high text-slate-600 text-xs"></i>
+          <input type="range" id="master-volume" min="0" max="100" value="85" oninput="setMasterVolume(this.value)" class="w-16">
+        </div>
+
+        <button onclick="downloadCurrentTrackWAV()" title="Descargar Audio Sintetizado (WAV)" class="px-3 py-2 rounded-xl bg-[#E0F2FE] hover:bg-[#BAE6FD] text-[#0284C7] border border-[#38BDF8] text-xs font-bold flex items-center gap-1.5 shrink-0 cursor-pointer">
+          <i class="fa-solid fa-download"></i>
+          <span>WAV</span>
+        </button>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- MODAL DE INSPECCIÓN DE LETRA / FICHA TÉCNICA -->
+  <div id="lyrics-modal" class="fixed inset-0 z-50 hidden bg-slate-900/40 backdrop-blur-xs items-center justify-center p-4">
+    <div class="bg-white border border-[#CBD5E1] rounded-2xl max-w-lg w-full p-5 shadow-xl flex flex-col gap-3 max-h-[85vh]">
+      <div class="flex items-center justify-between pb-2.5 border-b border-[#E2E8F0]">
+        <div>
+          <h3 id="modal-track-title" class="text-base font-extrabold text-black">Título de Pista</h3>
+          <p id="modal-track-subtitle" class="text-xs text-slate-600">Género • BPM • Modelo</p>
+        </div>
+        <button onclick="closeLyricsModal()" class="w-8 h-8 rounded-lg hover:bg-[#F1F5F9] text-slate-600 flex items-center justify-center cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div id="modal-track-instruments" class="flex flex-wrap gap-1.5"></div>
+      <pre id="modal-track-lyrics" class="bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl p-3 text-xs font-mono text-black whitespace-pre-wrap overflow-y-auto flex-1 leading-relaxed"></pre>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="loadModalTrackIntoEditor()" class="px-4 py-2 rounded-xl bg-[#E0F2FE] text-[#0284C7] border border-[#38BDF8] text-xs font-bold cursor-pointer">
+          Cargar en Editor Custom
+        </button>
+        <button onclick="closeLyricsModal()" class="px-4 py-2 rounded-xl bg-[#0284C7] text-white text-xs font-bold cursor-pointer">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LÓGICA DE APLICACIÓN Y MOTOR WEB AUDIO API -->
+  <script>
+    /**
+     * ============================================================================
+     * BASA UNIVERSAL AI STUDIO — MOTOR DE ESTADO, COMPOSICIÓN Y SÍNTESIS DSP
+     * ============================================================================
+     */
+
+    const STORAGE_KEY = 'basa_universal_studio_library_v1';
+
+    // Catálogo de instrumentos disponibles
+    const AVAILABLE_INSTRUMENTS = [
+      'Güira Metálica',
+      'Tambora Dominicana',
+      'Acordeón Diatónico',
+      'Requinto Bachatero',
+      'Bongó & Campana',
+      'Bajo Tumbao',
+      'Piano Montuno',
+      'Trombones & Metales',
+      'Sub-Bajo 808',
+      'Guitarra Acústica',
+      'Guitarrón & Trompeta'
+    ];
+
+    // Configuración musical por género (BPM sugerido, escala, instrumentos y patrón rítmico)
+    const GENRE_PRESETS = {
+      'Merengue Típico': {
+        bpm: 142,
+        key: 'Am',
+        instruments: ['Güira Metálica', 'Tambora Dominicana', 'Acordeón Diatónico', 'Bajo Tumbao'],
+        color1: '#0284C7',
+        color2: '#38BDF8',
+        scaleFreqs: [220.00, 246.94, 261.63, 293.66, 329.63, 349.23, 415.30, 440.00] // A harmonic minor
+      },
+      'Bachata': {
+        bpm: 124,
+        key: 'Am',
+        instruments: ['Requinto Bachatero', 'Bongó & Campana', 'Güira Metálica', 'Bajo Tumbao'],
+        color1: '#0369A1',
+        color2: '#7DD3FC',
+        scaleFreqs: [220.00, 261.63, 329.63, 349.23, 392.00, 440.00, 523.25]
+      },
+      'Bolero': {
+        bpm: 82,
+        key: 'Dm',
+        instruments: ['Guitarra Acústica', 'Bongó & Campana', 'Bajo Tumbao'],
+        color1: '#1E293B',
+        color2: '#38BDF8',
+        scaleFreqs: [146.83, 174.61, 220.00, 261.63, 293.66, 349.23]
+      },
+      'Salsa Dura': {
+        bpm: 102,
+        key: 'C',
+        instruments: ['Piano Montuno', 'Trombones & Metales', 'Bongó & Campana', 'Bajo Tumbao'],
+        color1: '#0284C7',
+        color2: '#0EA5E9',
+        scaleFreqs: [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25]
+      },
+      'Merengue de Calle': {
+        bpm: 134,
+        key: 'Em',
+        instruments: ['Güira Metálica', 'Tambora Dominicana', 'Trombones & Metales', 'Sub-Bajo 808'],
+        color1: '#0369A1',
+        color2: '#38BDF8',
+        scaleFreqs: [164.81, 196.00, 220.00, 246.94, 293.66, 329.63]
+      },
+      'Dembow': {
+        bpm: 118,
+        key: 'Fm',
+        instruments: ['Sub-Bajo 808', 'Güira Metálica', 'Tambora Dominicana'],
+        color1: '#0F172A',
+        color2: '#0284C7',
+        scaleFreqs: [174.61, 207.65, 233.08, 261.63, 311.13, 349.23]
+      },
+      'Ranchera': {
+        bpm: 96,
+        key: 'G',
+        instruments: ['Guitarrón & Trompeta', 'Guitarra Acústica'],
+        color1: '#0284C7',
+        color2: '#BAE6FD',
+        scaleFreqs: [196.00, 246.94, 293.66, 329.63, 369.99, 392.00]
+      }
+    };
+
+    // 3 Pistas de Ejemplo Precargadas
+    const DEFAULT_LIBRARY = [
+      {
+        id: 'basa-track-01',
+        title: 'Perico Ripiao en Tamboril',
+        genre: 'Merengue Típico',
+        bpm: 144,
+        duration: 150,
+        key: 'Am',
+        voice: 'Dúo Tropical Armonizado',
+        model: 'BASA-Típico-Engine',
+        instruments: ['Güira Metálica', 'Tambora Dominicana', 'Acordeón Diatónico', 'Bajo Tumbao'],
+        createdAt: 'Hoy, 10:15 AM',
+        lyrics: `[Intro]\n(Repique rápido de tambora y acordeón diatónico en La menor)\n\n[Verso]\nDesde Santiago hasta la línea noroeste\nEl acordeón repica con alegría\nLa güira brilla bajo el sol del mediodía\nY todo el pueblo baila hasta que amanece\n\n[Coro]\n¡Sube la tambora, dale con sabor!\nQue el merengue típico enciende el corazón\nCon BASA Universal suena la tradición\n¡Ay qué sabrosura en cada rincón!\n\n[Mambo]\n(Solo virtuoso de acordeón y corte de tambora)\n\n[Outro]\n(Cierre tradicional en seco)`
+      },
+      {
+        id: 'basa-track-02',
+        title: 'Noche de Luna en la Zona Colonial',
+        genre: 'Bachata',
+        bpm: 122,
+        duration: 180,
+        key: 'Am',
+        voice: 'Voz Masculina Cálida',
+        model: 'BASA-Vocal-Master',
+        instruments: ['Requinto Bachatero', 'Bongó & Campana', 'Güira Metálica', 'Bajo Tumbao'],
+        createdAt: 'Hoy, 11:40 AM',
+        lyrics: `[Intro]\n(Arpegio cristalino de requinto bachatero con bongó suave)\n\n[Verso]\nCaminando por las piedras de la Zona Colonial\nLas guitarras me recuerdan tu mirar\nCada nota del requinto es un suspiro\nQue se pierde en la brisa junto al mar\n\n[Coro]\nY suena la bachata en mi corazón\nCon el repique dulce del bongó\nAunque pasen los años y la estación\nTu recuerdo vive en esta canción\n\n[Requinto Solo]\n(Melodía aguda en traste 12 con vibrato expresivo)\n\n[Outro]\n(Desvanecimiento acústico con acorde menor novena)`
+      },
+      {
+        id: 'basa-track-03',
+        title: 'Guaguancó del Malecón',
+        genre: 'Salsa Dura',
+        bpm: 104,
+        duration: 195,
+        key: 'C',
+        voice: 'Coro Callejero / Pregón',
+        model: 'BASA-Audio-V10 Pro',
+        instruments: ['Piano Montuno', 'Trombones & Metales', 'Bongó & Campana', 'Bajo Tumbao'],
+        createdAt: 'Hoy, 01:05 PM',
+        lyrics: `[Intro]\n(Tumbao de piano montuno y golpe de trombones)\n\n[Verso]\nCuando el sol se esconde allá en el Malecón\nSe escucha la clave llamando al bailador\nEl piano marca el paso con elegancia\nY los metales llenan toda la estancia\n\n[Coro]\n¡Oye cómo suena mi son montuno!\nComo este ritmo no hay ninguno\nBASA en los controles poniendo el sazón\n¡Para que lo goce toda la nación!\n\n[Mambo]\n(Moña de trombones y solo de campana)\n\n[Outro]\n(Coda explosiva de metales)`
+      }
+    ];
+
+    // Estado global de la aplicación
+    let libraryTracks = [];
+    let selectedInstruments = new Set(['Güira Metálica', 'Tambora Dominicana', 'Acordeón Diatónico', 'Bajo Tumbao']);
+    let currentTrackId = null;
+    let modalInspectedTrack = null;
+
+    // Estado del Motor de Audio (Web Audio API)
+    let audioCtx = null;
+    let analyserNode = null;
+    let masterGainNode = null;
+    let isPlaying = false;
+    let schedulerTimer = null;
+    let progressTimer = null;
+    let currentStep = 0;
+    let playbackElapsed = 0;
+    let masterVolume = 0.85;
+
+    // Ganancias y Mute por Stem (Estudio Multipista)
+    const stemState = {
+      perc: { vol: 0.85, muted: false },
+      bass: { vol: 0.90, muted: false },
+      chord: { vol: 0.75, muted: false },
+      lead: { vol: 0.80, muted: false }
+    };
+
+    // Tap Tempo variables
+    let tapTimes = [];
+    let lastTappedBpm = 120;
+
+    /**
+     * Inicialización al cargar el documento
+     */
+    window.addEventListener('DOMContentLoaded', () => {
+      loadLibraryFromStorage();
+      renderInstrumentChips();
+      renderLibrary();
+      populateRemixSelectors();
+      updateRangeLabels();
+      initVisualizerCanvas();
+
+      // Seleccionar primera pista por defecto sin auto-reproducir (política de navegador)
+      if (libraryTracks.length > 0) {
+        selectTrackForPlayer(libraryTracks[0].id, false);
+      }
+    });
+
+    /**
+     * ============================================================================
+     * PERSISTENCIA EN LOCALSTORAGE
+     * ============================================================================
+     */
+    function loadLibraryFromStorage() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            libraryTracks = parsed;
+            return;
+          }
         }
-        [data-testid="stSidebar"] * {
-            color: #0f172a !important;
+      } catch (err) {
+        console.warn('Error leyendo localStorage:', err);
+      }
+      libraryTracks = JSON.parse(JSON.stringify(DEFAULT_LIBRARY));
+      saveLibraryToStorage();
+    }
+
+    function saveLibraryToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(libraryTracks));
+      } catch (err) {
+        console.warn('Error guardando en localStorage:', err);
+      }
+      updateLibraryCounters();
+      populateRemixSelectors();
+    }
+
+    function resetDemoLibrary() {
+      libraryTracks = JSON.parse(JSON.stringify(DEFAULT_LIBRARY));
+      saveLibraryToStorage();
+      renderLibrary();
+      selectTrackForPlayer(libraryTracks[0].id, false);
+      showToast('Biblioteca restaurada con las 3 pistas maestras de BASA.', 'info');
+    }
+
+    function updateLibraryCounters() {
+      const count = libraryTracks.length;
+      document.getElementById('nav-lib-count').textContent = count;
+      document.getElementById('library-total-badge').textContent = `${count} ${count === 1 ? 'pista' : 'pistas'}`;
+    }
+
+    /**
+     * ============================================================================
+     * NAVEGACIÓN Y MODOS DE CREACIÓN (AGENT / CUSTOM / REMIX)
+     * ============================================================================
+     */
+    function switchWorkspaceTab(tabName) {
+      // Actualizar botones laterales
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('bg-[#E0F2FE]', 'text-[#0284C7]', 'border', 'border-[#BAE6FD]', 'font-bold');
+        btn.classList.add('text-slate-700', 'font-semibold');
+        const icon = btn.querySelector('i');
+        if (icon) {
+          icon.classList.remove('text-[#0284C7]');
+          icon.classList.add('text-slate-500');
         }
-        h1, h2, h3, h4, p, label, span {
-            color: #0f172a;
+      });
+
+      const activeBtn = document.getElementById(`nav-${tabName}`);
+      if (activeBtn) {
+        activeBtn.classList.add('bg-[#E0F2FE]', 'text-[#0284C7]', 'border', 'border-[#BAE6FD]', 'font-bold');
+        activeBtn.classList.remove('text-slate-700', 'font-semibold');
+        const icon = activeBtn.querySelector('i');
+        if (icon) {
+          icon.classList.add('text-[#0284C7]');
+          icon.classList.remove('text-slate-500');
         }
-        /* Tarjetas métricas */
-        div[data-testid="stMetric"] {
-            background-color: #ffffff;
-            border: 1px solid #cbd5e1;
-            border-left: 5px solid #0284c7;
-            padding: 14px 18px;
-            border-radius: 10px;
-            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+      }
+
+      // En móvil/tablet, si pulsa Biblioteca BASA, hacer scroll suave al panel derecho
+      if (tabName === 'library') {
+        document.getElementById('library-panel').scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+
+      // Mostrar vista correspondiente en el panel central
+      document.querySelectorAll('.workspace-view').forEach(view => view.classList.add('hidden'));
+      const targetView = document.getElementById(`view-${tabName}`);
+      if (targetView) {
+        targetView.classList.remove('hidden');
+        targetView.classList.add('flex');
+      }
+    }
+
+    function setCreationMode(mode) {
+      // Actualizar pestañas Agent / Custom / Remix
+      document.querySelectorAll('.mode-tab').forEach(btn => {
+        btn.classList.remove('bg-white', 'text-[#0284C7]', 'shadow-xs', 'border', 'border-[#BAE6FD]', 'font-bold');
+        btn.classList.add('text-slate-700', 'font-semibold');
+      });
+
+      const activeTab = document.getElementById(`mode-btn-${mode}`);
+      if (activeTab) {
+        activeTab.classList.add('bg-white', 'text-[#0284C7]', 'shadow-xs', 'border', 'border-[#BAE6FD]', 'font-bold');
+        activeTab.classList.remove('text-slate-700', 'font-semibold');
+      }
+
+      // Mostrar panel correspondiente
+      document.querySelectorAll('.creation-panel').forEach(panel => {
+        panel.classList.add('hidden');
+        panel.classList.remove('flex');
+      });
+
+      const activePanel = document.getElementById(`panel-${mode}`);
+      if (activePanel) {
+        activePanel.classList.remove('hidden');
+        activePanel.classList.add('flex');
+      }
+
+      // Ocultar el botón inferior general en modo Remix (ya tiene su propio botón dedicado)
+      const mainFooter = document.getElementById('main-generate-footer');
+      if (mode === 'remix') {
+        mainFooter.classList.add('hidden');
+        loadRemixSourcePreview();
+      } else {
+        mainFooter.classList.remove('hidden');
+      }
+    }
+
+    function updateModelBadge() {
+      const model = document.getElementById('ai-model-select').value;
+      document.getElementById('active-model-label').textContent = model;
+      showToast(`Motor cambiado a ${model}`, 'info');
+    }
+
+    /**
+     * ============================================================================
+     * MODO AGENT: COMPOSITOR INTELIGENTE DE LETRAS Y ESTRUCTURA
+     * ============================================================================
+     */
+    function fillAgentPrompt(text) {
+      document.getElementById('agent-idea-input').value = text;
+    }
+
+    function runAgentComposer() {
+      const idea = document.getElementById('agent-idea-input').value.trim();
+      const hintGenre = document.getElementById('agent-genre-hint').value;
+
+      if (!idea) {
+        showToast('Escribe primero una idea o selecciona una sugerencia rápida.', 'warn');
+        return;
+      }
+
+      // Detectar género por palabras clave si está en automático
+      let detectedGenre = hintGenre;
+      if (detectedGenre === 'auto') {
+        const lower = idea.toLowerCase();
+        if (lower.includes('bachata') || lower.includes('requinto') || lower.includes('amargue')) detectedGenre = 'Bachata';
+        else if (lower.includes('salsa') || lower.includes('trombón') || lower.includes('montuno')) detectedGenre = 'Salsa Dura';
+        else if (lower.includes('dembow') || lower.includes('808') || lower.includes('urbano')) detectedGenre = 'Dembow';
+        else if (lower.includes('calle') || lower.includes('mambo urbano')) detectedGenre = 'Merengue de Calle';
+        else if (lower.includes('bolero') || lower.includes('bohemio')) detectedGenre = 'Bolero';
+        else if (lower.includes('ranchera') || lower.includes('mariachi')) detectedGenre = 'Ranchera';
+        else detectedGenre = 'Merengue Típico';
+      }
+
+      const preset = GENRE_PRESETS[detectedGenre] || GENRE_PRESETS['Merengue Típico'];
+
+      // Generar título creativo basado en la idea
+      const words = idea.replace(/[.,!?]/g, '').split(' ').filter(w => w.length > 3);
+      const keyword = words.length > 0 ? words[Math.floor(Math.random() * Math.min(words.length, 4))] : 'Caribe';
+      const capitalizedKeyword = keyword.charAt(0).toUpperCase() + keyword.slice(1);
+      const generatedTitle = `${detectedGenre}: Eco de ${capitalizedKeyword}`;
+
+      // Generar letra estructurada contextual
+      const generatedLyrics = `[Intro]\n(Entrada instrumental de ${preset.instruments.slice(0, 2).join(' y ')} a ${preset.bpm} BPM)\n\n[Verso]\nInspirado en esta historia: ${idea.slice(0, 75)}\nEl ritmo va subiendo con fuerza y sentimiento\nCada compás dibuja nuestra propia identidad\nCon el sello inconfundible de BASA Universal\n\n[Coro]\n¡Suena el ${detectedGenre} con toda su pasión!\nQue retumbe la pista y vibre el corazón\nDe Santo Domingo para el mundo entero\nEste arreglo maestro llegó primero\n\n[Mambo]\n(Puente instrumental con ${preset.instruments.join(', ')})\n\n[Outro]\n(Cierre magistral en tonalidad ${preset.key})`;
+
+      // Volcar datos al editor Custom
+      document.getElementById('track-title').value = generatedTitle;
+      document.getElementById('track-genre').value = detectedGenre;
+      document.getElementById('track-bpm').value = preset.bpm;
+      document.getElementById('track-key').value = preset.key;
+      document.getElementById('track-lyrics').value = generatedLyrics;
+
+      selectedInstruments = new Set(preset.instruments);
+      renderInstrumentChips();
+      updateRangeLabels();
+
+      // Cambiar automáticamente a Custom para revisión y producción
+      setCreationMode('custom');
+      showToast(`Agent generó "${generatedTitle}" (${detectedGenre}). Revisa y pulsa Producir.`, 'success');
+    }
+
+    /**
+     * ============================================================================
+     * MODO CUSTOM: CONTROLES DE EDICIÓN E INSTRUMENTACIÓN
+     * ============================================================================
+     */
+    function renderInstrumentChips() {
+      const container = document.getElementById('instruments-container');
+      container.innerHTML = '';
+
+      AVAILABLE_INSTRUMENTS.forEach(inst => {
+        const isSelected = selectedInstruments.has(inst);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = isSelected
+          ? 'px-3 py-1.5 rounded-xl text-xs font-bold bg-[#E0F2FE] text-[#0284C7] border border-[#38BDF8] transition flex items-center gap-1.5 cursor-pointer'
+          : 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-white hover:bg-[#F8FAFC] text-slate-700 border border-[#CBD5E1] transition flex items-center gap-1.5 cursor-pointer';
+
+        btn.innerHTML = `<i class="fa-solid ${isSelected ? 'fa-check-circle' : 'fa-plus'} text-[11px]"></i><span>${inst}</span>`;
+        btn.onclick = () => {
+          if (selectedInstruments.has(inst)) {
+            if (selectedInstruments.size > 1) selectedInstruments.delete(inst);
+          } else {
+            selectedInstruments.add(inst);
+          }
+          renderInstrumentChips();
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    function applyGenreDefaults() {
+      const genre = document.getElementById('track-genre').value;
+      const preset = GENRE_PRESETS[genre];
+      if (!preset) return;
+
+      document.getElementById('track-bpm').value = preset.bpm;
+      document.getElementById('track-key').value = preset.key;
+      selectedInstruments = new Set(preset.instruments);
+      renderInstrumentChips();
+      updateRangeLabels();
+    }
+
+    function insertTag(tagText) {
+      const textarea = document.getElementById('track-lyrics');
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const currentVal = textarea.value;
+      const insertion = `\n${tagText}\n`;
+      textarea.value = currentVal.substring(0, start) + insertion + currentVal.substring(end);
+      textarea.focus();
+      textarea.selectionStart = textarea.selectionEnd = start + insertion.length;
+    }
+
+    function updateRangeLabels() {
+      const bpm = document.getElementById('track-bpm').value;
+      const dur = parseInt(document.getElementById('track-duration').value, 10);
+      document.getElementById('bpm-display').textContent = `${bpm} BPM`;
+      document.getElementById('duration-display').textContent = formatSeconds(dur);
+    }
+
+    /**
+     * ============================================================================
+     * PRODUCCIÓN DE PISTAS Y MODO REMIX
+     * ============================================================================
+     */
+    function generateNewTrack() {
+      // Si el usuario está en Agent y pulsa Producir directamente, ejecutar Agent primero si el título está vacío
+      const titleInput = document.getElementById('track-title').value.trim();
+      const title = titleInput || 'Producción BASA Sin Título';
+      const genre = document.getElementById('track-genre').value;
+      const bpm = parseInt(document.getElementById('track-bpm').value, 10);
+      const duration = parseInt(document.getElementById('track-duration').value, 10);
+      const key = document.getElementById('track-key').value;
+      const voice = document.getElementById('track-voice').value;
+      const lyrics = document.getElementById('track-lyrics').value.trim();
+      const model = document.getElementById('ai-model-select').value;
+
+      const newTrack = {
+        id: 'basa-' + Date.now(),
+        title,
+        genre,
+        bpm,
+        duration,
+        key,
+        voice,
+        model,
+        instruments: Array.from(selectedInstruments),
+        createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        lyrics: lyrics || '[Instrumental generado por BASA AI]'
+      };
+
+      libraryTracks.unshift(newTrack);
+      saveLibraryToStorage();
+      renderLibrary();
+      selectTrackForPlayer(newTrack.id, true);
+      showToast(`Pista "${title}" producida y reproduciendo en el motor BASA.`, 'success');
+    }
+
+    function populateRemixSelectors() {
+      const select = document.getElementById('remix-source-select');
+      if (!select) return;
+      const prevVal = select.value;
+      select.innerHTML = '';
+
+      libraryTracks.forEach(track => {
+        const opt = document.createElement('option');
+        opt.value = track.id;
+        opt.textContent = `${track.title} (${track.genre} • ${track.bpm} BPM)`;
+        select.appendChild(opt);
+      });
+
+      if (prevVal && libraryTracks.some(t => t.id === prevVal)) {
+        select.value = prevVal;
+      }
+      loadRemixSourcePreview();
+    }
+
+    function loadRemixSourcePreview() {
+      const sourceId = document.getElementById('remix-source-select').value;
+      const track = libraryTracks.find(t => t.id === sourceId);
+      const card = document.getElementById('remix-source-card');
+      if (!track || !card) return;
+
+      card.innerHTML = `
+        <div class="flex items-center justify-between mb-1">
+          <span class="font-bold text-black">Pista Base: ${track.title}</span>
+          <span class="font-mono text-[#0284C7] font-bold">${track.genre} • ${track.bpm} BPM</span>
+        </div>
+        <p class="text-slate-600">Instrumentos originales: ${track.instruments.join(', ')}</p>
+      `;
+    }
+
+    function generateRemixTrack() {
+      const sourceId = document.getElementById('remix-source-select').value;
+      const sourceTrack = libraryTracks.find(t => t.id === sourceId);
+      if (!sourceTrack) return;
+
+      const targetGenre = document.getElementById('remix-target-genre').value;
+      const targetBpm = parseInt(document.getElementById('remix-bpm-slider').value, 10);
+      const intensity = document.getElementById('remix-intensity-slider').value;
+      const preset = GENRE_PRESETS[targetGenre] || GENRE_PRESETS['Merengue de Calle'];
+
+      const remixTrack = {
+        id: 'basa-remix-' + Date.now(),
+        title: `${sourceTrack.title} (${targetGenre} Remix)`,
+        genre: targetGenre,
+        bpm: targetBpm,
+        duration: sourceTrack.duration,
+        key: sourceTrack.key,
+        voice: sourceTrack.voice,
+        model: document.getElementById('ai-model-select').value,
+        instruments: preset.instruments,
+        createdAt: 'Remix • ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        lyrics: `[REMIX ${intensity}% - Fusión ${targetGenre} a ${targetBpm} BPM]\n\n` + sourceTrack.lyrics
+      };
+
+      libraryTracks.unshift(remixTrack);
+      saveLibraryToStorage();
+      renderLibrary();
+      selectTrackForPlayer(remixTrack.id, true);
+      showToast(`Remix "${remixTrack.title}" creado con éxito.`, 'success');
+    }
+
+    /**
+     * ============================================================================
+     * RENDERIZADO DE BIBLIOTECA Y CARÁTULAS SVG DINÁMICAS
+     * ============================================================================
+     */
+    function generateDynamicCoverSVG(track) {
+      const preset = GENRE_PRESETS[track.genre] || { color1: '#0284C7', color2: '#38BDF8' };
+      const initials = track.title
+        .split(' ')
+        .slice(0, 2)
+        .map(w => w[0] || '')
+        .join('')
+        .toUpperCase();
+
+      // Generar barras decorativas deterministas según el ID
+      const seed = track.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+      const h1 = 10 + (seed % 16);
+      const h2 = 14 + ((seed * 3) % 18);
+      const h3 = 8 + ((seed * 7) % 16);
+
+      return `
+        <svg viewBox="0 0 64 64" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="grad-${track.id}" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#E0F2FE"/>
+              <stop offset="100%" stop-color="${preset.color2}"/>
+            </linearGradient>
+          </defs>
+          <rect width="64" height="64" fill="url(#grad-${track.id})"/>
+          <circle cx="50" cy="14" r="16" fill="#FFFFFF" fill-opacity="0.35"/>
+          <rect x="10" y="${44 - h1}" width="5" height="${h1}" rx="2.5" fill="${preset.color1}"/>
+          <rect x="18" y="${44 - h2}" width="5" height="${h2}" rx="2.5" fill="${preset.color1}"/>
+          <rect x="26" y="${44 - h3}" width="5" height="${h3}" rx="2.5" fill="${preset.color1}"/>
+          <text x="54" y="54" text-anchor="end" font-family="Inter, sans-serif" font-weight="800" font-size="14" fill="#0F172A">${initials || 'BA'}</text>
+        </svg>
+      `;
+    }
+
+    function renderLibrary() {
+      const container = document.getElementById('library-list');
+      const query = (document.getElementById('library-search').value || '').toLowerCase().trim();
+      container.innerHTML = '';
+
+      const filtered = libraryTracks.filter(t =>
+        t.title.toLowerCase().includes(query) ||
+        t.genre.toLowerCase().includes(query) ||
+        t.instruments.some(i => i.toLowerCase().includes(query))
+      );
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-8 px-4 bg-[#F8FAFC] border border-dashed border-[#CBD5E1] rounded-2xl">
+            <p class="text-xs font-bold text-slate-700">No se encontraron pistas con ese filtro.</p>
+          </div>
+        `;
+        return;
+      }
+
+      filtered.forEach(track => {
+        const isCurrent = track.id === currentTrackId;
+        const isTrackPlaying = isCurrent && isPlaying;
+
+        const card = document.createElement('div');
+        card.className = isCurrent
+          ? 'bg-[#E0F2FE]/55 border-2 border-[#0284C7] rounded-2xl p-3 transition flex flex-col gap-2.5'
+          : 'bg-[#F8FAFC] hover:bg-white border border-[#CBD5E1] rounded-2xl p-3 transition flex flex-col gap-2.5';
+
+        card.innerHTML = `
+          <div class="flex items-center gap-3">
+            <div class="relative w-14 h-14 rounded-xl border border-[#CBD5E1] overflow-hidden shrink-0 group cursor-pointer" onclick="toggleSpecificTrack('${track.id}')">
+              ${generateDynamicCoverSVG(track)}
+              <div class="absolute inset-0 bg-slate-900/35 flex items-center justify-center opacity-95 group-hover:bg-slate-900/50 transition">
+                <i class="fa-solid ${isTrackPlaying ? 'fa-pause' : 'fa-play'} text-white text-sm"></i>
+              </div>
+            </div>
+
+            <div class="min-w-0 flex-1">
+              <div class="flex items-start justify-between gap-1">
+                <h3 class="text-xs sm:text-sm font-extrabold text-black truncate" title="${track.title}">${track.title}</h3>
+                <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-white border border-[#CBD5E1] text-slate-700 shrink-0">${track.bpm} BPM</span>
+              </div>
+              <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                <span class="px-2 py-0.5 rounded-md bg-[#E0F2FE] text-[#0284C7] text-[10px] font-bold">${track.genre}</span>
+                <span class="text-[11px] text-slate-600 font-medium">${formatSeconds(track.duration)} • ${track.key}</span>
+              </div>
+              <p class="text-[10px] text-slate-500 truncate mt-1">${track.instruments.join(' • ')}</p>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-2 border-t border-[#E2E8F0] gap-1.5">
+            <button onclick="openLyricsModal('${track.id}')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-[#E0F2FE] border border-[#CBD5E1] text-[11px] font-bold text-black transition cursor-pointer flex items-center gap-1">
+              <i class="fa-solid fa-file-lines text-[#0284C7]"></i> Letra
+            </button>
+            <button onclick="sendTrackToRemix('${track.id}')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-[#E0F2FE] border border-[#CBD5E1] text-[11px] font-bold text-black transition cursor-pointer flex items-center gap-1">
+              <i class="fa-solid fa-shuffle text-[#0284C7]"></i> Remix
+            </button>
+            <button onclick="downloadTrackWAVById('${track.id}')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-[#E0F2FE] border border-[#CBD5E1] text-[11px] font-bold text-[#0284C7] transition cursor-pointer flex items-center gap-1">
+              <i class="fa-solid fa-download"></i> WAV
+            </button>
+            <button onclick="deleteTrack('${track.id}')" title="Eliminar pista" class="px-2 py-1 rounded-lg hover:bg-red-50 text-slate-500 hover:text-red-600 text-[11px] transition cursor-pointer">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function sendTrackToRemix(trackId) {
+      switchWorkspaceTab('create');
+      setCreationMode('remix');
+      document.getElementById('remix-source-select').value = trackId;
+      loadRemixSourcePreview();
+      showToast('Pista cargada en el motor de Remix.', 'info');
+    }
+
+    function deleteTrack(trackId) {
+      if (libraryTracks.length <= 1) {
+        showToast('Debe permanecer al menos una pista en la biblioteca.', 'warn');
+        return;
+      }
+      if (currentTrackId === trackId) {
+        stopPlayback();
+      }
+      libraryTracks = libraryTracks.filter(t => t.id !== trackId);
+      saveLibraryToStorage();
+      renderLibrary();
+      if (currentTrackId === trackId) {
+        selectTrackForPlayer(libraryTracks[0].id, false);
+      }
+      showToast('Pista eliminada de la biblioteca.', 'info');
+    }
+
+    /**
+     * ============================================================================
+     * MODAL DE LETRAS Y FICHA TÉCNICA
+     * ============================================================================
+     */
+    function openLyricsModal(trackId) {
+      const track = libraryTracks.find(t => t.id === trackId);
+      if (!track) return;
+      modalInspectedTrack = track;
+
+      document.getElementById('modal-track-title').textContent = track.title;
+      document.getElementById('modal-track-subtitle').textContent = `${track.genre} • ${track.bpm} BPM • Tonalidad ${track.key} • ${track.model}`;
+      document.getElementById('modal-track-lyrics').textContent = track.lyrics;
+
+      const instBox = document.getElementById('modal-track-instruments');
+      instBox.innerHTML = track.instruments
+        .map(i => `<span class="px-2.5 py-0.5 rounded-full bg-[#E0F2FE] text-[#0284C7] text-xs font-bold">${i}</span>`)
+        .join('');
+
+      const modal = document.getElementById('lyrics-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeLyricsModal() {
+      const modal = document.getElementById('lyrics-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function loadModalTrackIntoEditor() {
+      if (!modalInspectedTrack) return;
+      document.getElementById('track-title').value = modalInspectedTrack.title;
+      document.getElementById('track-genre').value = modalInspectedTrack.genre;
+      document.getElementById('track-bpm').value = modalInspectedTrack.bpm;
+      document.getElementById('track-duration').value = modalInspectedTrack.duration;
+      document.getElementById('track-key').value = modalInspectedTrack.key;
+      document.getElementById('track-lyrics').value = modalInspectedTrack.lyrics;
+      selectedInstruments = new Set(modalInspectedTrack.instruments);
+
+      renderInstrumentChips();
+      updateRangeLabels();
+      closeLyricsModal();
+      switchWorkspaceTab('create');
+      setCreationMode('custom');
+      showToast('Arreglo cargado en el editor Custom para edición.', 'success');
+    }
+
+    /**
+     * ============================================================================
+     * MOTOR DE AUDIO SINTETIZADO WEB AUDIO API (TIEMPO REAL + VISUALIZADOR)
+     * ============================================================================
+     */
+    function ensureAudioContext() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContextClass();
+
+        masterGainNode = audioCtx.createGain();
+        masterGainNode.gain.value = masterVolume;
+
+        analyserNode = audioCtx.createAnalyser();
+        analyserNode.fftSize = 64;
+        analyserNode.smoothingTimeConstant = 0.8;
+
+        masterGainNode.connect(analyserNode);
+        analyserNode.connect(audioCtx.destination);
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function selectTrackForPlayer(trackId, autoPlay = false) {
+      const track = libraryTracks.find(t => t.id === trackId);
+      if (!track) return;
+
+      const wasPlaying = isPlaying;
+      stopPlayback();
+
+      currentTrackId = track.id;
+      playbackElapsed = 0;
+
+      // Actualizar interfaz del reproductor inferior
+      document.getElementById('player-cover-mini').innerHTML = generateDynamicCoverSVG(track);
+      document.getElementById('player-track-title').textContent = track.title;
+      document.getElementById('player-genre-badge').textContent = track.genre;
+      document.getElementById('player-track-meta').textContent = `${track.bpm} BPM • Tonalidad ${track.key} • ${track.instruments.slice(0, 3).join(', ')}`;
+      document.getElementById('player-time-current').textContent = '00:00';
+      document.getElementById('player-time-total').textContent = formatSeconds(track.duration);
+      document.getElementById('player-progress-bar').style.width = '0%';
+
+      renderLibrary();
+
+      if (autoPlay || wasPlaying) {
+        startPlayback();
+      }
+    }
+
+    function toggleSpecificTrack(trackId) {
+      if (currentTrackId === trackId) {
+        togglePlayCurrent();
+      } else {
+        selectTrackForPlayer(trackId, true);
+      }
+    }
+
+    function togglePlayCurrent() {
+      if (!currentTrackId && libraryTracks.length > 0) {
+        selectTrackForPlayer(libraryTracks[0].id, true);
+        return;
+      }
+      if (isPlaying) {
+        pausePlayback();
+      } else {
+        startPlayback();
+      }
+    }
+
+    function startPlayback() {
+      const track = libraryTracks.find(t => t.id === currentTrackId);
+      if (!track) return;
+
+      ensureAudioContext();
+      isPlaying = true;
+      updatePlayButtonUI();
+      renderLibrary();
+
+      // Intervalo de pasos semicorcheas (16 pasos por compás)
+      const stepDurationMs = (60 / track.bpm / 4) * 1000;
+
+      // Disparar primer paso inmediatamente
+      triggerSynthesizedStep(track, currentStep);
+      currentStep = (currentStep + 1) % 16;
+
+      schedulerTimer = setInterval(() => {
+        if (!isPlaying) return;
+        triggerSynthesizedStep(track, currentStep);
+        currentStep = (currentStep + 1) % 16;
+      }, stepDurationMs);
+
+      progressTimer = setInterval(() => {
+        if (!isPlaying) return;
+        playbackElapsed += 0.25;
+        if (playbackElapsed >= track.duration) {
+          playbackElapsed = 0;
         }
-        /* Botones primarios azul cielo / contraste */
-        .stButton > button[kind="primary"] {
-            background-color: #0284c7;
-            color: #ffffff !important;
-            border: none;
-            font-weight: 600;
-            border-radius: 8px;
+        const pct = Math.min(100, (playbackElapsed / track.duration) * 100);
+        document.getElementById('player-progress-bar').style.width = `${pct}%`;
+        document.getElementById('player-time-current').textContent = formatSeconds(Math.floor(playbackElapsed));
+      }, 250);
+    }
+
+    function pausePlayback() {
+      isPlaying = false;
+      clearInterval(schedulerTimer);
+      clearInterval(progressTimer);
+      updatePlayButtonUI();
+      renderLibrary();
+    }
+
+    function stopPlayback() {
+      isPlaying = false;
+      clearInterval(schedulerTimer);
+      clearInterval(progressTimer);
+      currentStep = 0;
+      playbackElapsed = 0;
+      document.getElementById('player-progress-bar').style.width = '0%';
+      document.getElementById('player-time-current').textContent = '00:00';
+      updatePlayButtonUI();
+      renderLibrary();
+    }
+
+    function playNextTrack() {
+      if (libraryTracks.length === 0) return;
+      const idx = libraryTracks.findIndex(t => t.id === currentTrackId);
+      const nextIdx = (idx + 1) % libraryTracks.length;
+      selectTrackForPlayer(libraryTracks[nextIdx].id, isPlaying);
+    }
+
+    function playPreviousTrack() {
+      if (libraryTracks.length === 0) return;
+      const idx = libraryTracks.findIndex(t => t.id === currentTrackId);
+      const prevIdx = (idx - 1 + libraryTracks.length) % libraryTracks.length;
+      selectTrackForPlayer(libraryTracks[prevIdx].id, isPlaying);
+    }
+
+    function seekPlayback(event) {
+      const track = libraryTracks.find(t => t.id === currentTrackId);
+      if (!track) return;
+      const rect = event.currentTarget.getBoundingClientRect();
+      const clickX = event.clientX - rect.left;
+      const ratio = Math.max(0, Math.min(1, clickX / rect.width));
+      playbackElapsed = ratio * track.duration;
+      document.getElementById('player-progress-bar').style.width = `${ratio * 100}%`;
+      document.getElementById('player-time-current').textContent = formatSeconds(Math.floor(playbackElapsed));
+    }
+
+    function updatePlayButtonUI() {
+      const icon = document.getElementById('main-play-icon');
+      if (isPlaying) {
+        icon.classList.remove('fa-play', 'ml-0.5');
+        icon.classList.add('fa-pause');
+      } else {
+        icon.classList.remove('fa-pause');
+        icon.classList.add('fa-play', 'ml-0.5');
+      }
+    }
+
+    function setMasterVolume(val) {
+      masterVolume = val / 100;
+      if (masterGainNode) {
+        masterGainNode.gain.setValueAtTime(masterVolume, audioCtx.currentTime);
+      }
+    }
+
+    /**
+     * Síntesis Rítmica y Armónica por Paso según Género
+     */
+    function triggerSynthesizedStep(track, step) {
+      if (!audioCtx || !masterGainNode) return;
+      const now = audioCtx.currentTime;
+      const preset = GENRE_PRESETS[track.genre] || GENRE_PRESETS['Merengue Típico'];
+      const scale = preset.scaleFreqs;
+
+      // 1. CANAL PERCUSIÓN (Tambora / Bombo / Güira / Bongó)
+      if (!stemState.perc.muted && stemState.perc.vol > 0) {
+        const pVol = stemState.perc.vol * 0.45;
+
+        // Golpe grave (Tambora / Bombo)
+        const isKickStep =
+          (track.genre.includes('Merengue') && (step % 4 === 0 || step === 14)) ||
+          (track.genre === 'Bachata' && (step === 0 || step === 4 || step === 8 || step === 12 || step === 14)) ||
+          (track.genre === 'Dembow' && (step % 4 === 0)) ||
+          (track.genre === 'Salsa Dura' && (step === 0 || step === 6 || step === 8 || step === 14)) ||
+          ((track.genre === 'Bolero' || track.genre === 'Ranchera') && (step === 0 || step === 8));
+
+        if (isKickStep) {
+          playDrumKick(now, pVol, track.genre === 'Dembow' ? 48 : 72);
         }
-        .stButton > button[kind="primary"]:hover {
-            background-color: #0369a1;
+
+        // Golpe agudo / Slap / Caja / Dembow snare
+        const isSnareStep =
+          (track.genre === 'Dembow' && (step === 3 || step === 6 || step === 11 || step === 14)) ||
+          (track.genre.includes('Merengue') && (step === 2 || step === 6 || step === 10 || step === 14)) ||
+          (track.genre === 'Bachata' && (step === 6 || step === 14)) ||
+          (track.genre === 'Salsa Dura' && (step === 4 || step === 10 || step === 12));
+
+        if (isSnareStep) {
+          playPercussionSlap(now, pVol * 0.75);
         }
-        .stButton > button[kind="secondary"] {
-            background-color: #ffffff;
-            color: #0f172a !important;
-            border: 1px solid #94a3b8;
-            font-weight: 600;
-            border-radius: 8px;
+
+        // Raspado continuo de Güira Metálica / Hi-Hat
+        if (step % 2 === 0 || track.genre.includes('Merengue')) {
+          const accent = step % 4 === 0 ? 1.0 : 0.45;
+          playGuiraScrape(now, pVol * 0.25 * accent);
         }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+      }
 
-DB_PATH = Path("basa_music_projects.db")
-HTML_MODULE_PATH = Path("studio_audio.html")
-
-
-# -------------------------------------------------------------------
-# CAPA DE PERSISTENCIA EN BASE DE DATOS (SQLITE)
-# -------------------------------------------------------------------
-def init_db() -> None:
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS proyectos_musicales (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                titulo TEXT NOT NULL,
-                persona_artistica TEXT NOT NULL,
-                genero TEXT NOT NULL,
-                bpm INTEGER NOT NULL,
-                duracion_seg INTEGER NOT NULL,
-                modelo_ia TEXT NOT NULL,
-                instrumentacion TEXT,
-                letra TEXT,
-                estado TEXT DEFAULT 'Maqueta',
-                fecha_creacion TEXT NOT NULL
-            )
-            """
-        )
-        # Sembrar registros iniciales si la tabla está vacía
-        cursor = conn.execute("SELECT COUNT(*) FROM proyectos_musicales")
-        if cursor.fetchone()[0] == 0:
-            proyectos_iniciales = [
-                (
-                    "El Lápiz Pesa Más que el Pico",
-                    "El Forense de la Música",
-                    "Merengue Típico (Perico Ripiao)",
-                    138,
-                    45,
-                    "BASA-Típico-Engine",
-                    "Acordeón, Güira Metálica, Tambora, Bajo",
-                    "[Intro]\n¡Ay ombe! De Pimentel para el mundo entero...\n[Coro]\nEl lápiz pesa más que el pico y la pala,\ncuando la mente estudia y el alma no resbala.",
-                    "Masterizado",
-                    datetime.now().strftime("%Y-%m-%d %H:%M"),
-                ),
-                (
-                    "Tardes de Aroma y Café",
-                    "Aroma de Café",
-                    "Bolero Clásico",
-                    88,
-                    60,
-                    "BASA-Acústico-Bolero",
-                    "Requinto, Guitarra Española, Bongó, Contrabajo",
-                    "[Verso 1]\nEn el silencio tibio de la mañana,\nun sorbo de recuerdos abre la ventana.",
-                    "En Producción",
-                    datetime.now().strftime("%Y-%m-%d %H:%M"),
-                ),
-            ]
-            conn.executemany(
-                """
-                INSERT INTO proyectos_musicales
-                (titulo, persona_artistica, genero, bpm, duracion_seg, modelo_ia, instrumentacion, letra, estado, fecha_creacion)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                proyectos_iniciales,
-            )
-        conn.commit()
-
-
-def cargar_proyectos() -> pd.DataFrame:
-    with sqlite3.connect(DB_PATH) as conn:
-        return pd.read_sql_query(
-            "SELECT * FROM proyectos_musicales ORDER BY id DESC", conn
-        )
-
-
-def guardar_proyecto(
-    titulo: str,
-    persona: str,
-    genero: str,
-    bpm: int,
-    duracion: int,
-    modelo: str,
-    instrumentos: str,
-    letra: str,
-    estado: str,
-) -> None:
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute(
-            """
-            INSERT INTO proyectos_musicales
-            (titulo, persona_artistica, genero, bpm, duracion_seg, modelo_ia, instrumentacion, letra, estado, fecha_creacion)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                titulo.strip(),
-                persona,
-                genero,
-                int(bpm),
-                int(duracion),
-                modelo,
-                instrumentos.strip(),
-                letra.strip(),
-                estado,
-                datetime.now().strftime("%Y-%m-%d %H:%M"),
-            ),
-        )
-        conn.commit()
-
-
-def actualizar_estado_proyecto(proyecto_id: int, nuevo_estado: str) -> None:
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute(
-            "UPDATE proyectos_musicales SET estado = ? WHERE id = ?",
-            (nuevo_estado, proyecto_id),
-        )
-        conn.commit()
-
-
-def eliminar_proyecto(proyecto_id: int) -> None:
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute("DELETE FROM proyectos_musicales WHERE id = ?", (proyecto_id,))
-        conn.commit()
-
-
-def exportar_excel(df: pd.DataFrame) -> bytes:
-    buffer = BytesIO()
-    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False, sheet_name="Catalogo_BASA_Studio")
-    return buffer.getvalue()
-
-
-# -------------------------------------------------------------------
-# INICIALIZACIÓN DE BASE DE DATOS Y BARRA LATERAL
-# -------------------------------------------------------------------
-init_db()
-df_proyectos = cargar_proyectos()
-
-with st.sidebar:
-    st.markdown("## 🎛️ BASA Universal Studio")
-    st.caption("Suite de Producción Musical, Letras y Síntesis Audio")
-    st.divider()
-
-    vista_activa = st.radio(
-        "Navegación del Módulo",
-        options=[
-            "🎹 Estudio de Producción IA",
-            "📂 Gestión de Proyectos y Catálogo",
-            "📥 Importar / Exportar Respaldos",
-        ],
-        index=0,
-    )
-
-    st.divider()
-    st.markdown("### 📊 Resumen del Catálogo")
-    st.metric("Pistas Registradas", len(df_proyectos))
-    bpm_promedio = int(df_proyectos["bpm"].mean()) if not df_proyectos.empty else 0
-    st.metric("Tempo Promedio (BPM)", f"{bpm_promedio} BPM")
-
-    st.divider()
-    st.info(
-        "**Consejo de Audio:** Haz clic dentro del panel del estudio antes de pulsar **Reproducir** para habilitar el motor Web Audio del navegador."
-    )
-
-
-# -------------------------------------------------------------------
-# VISTA 1: ESTUDIO DE PRODUCCIÓN IA (MÓDULO HTML EMBEBIDO)
-# -------------------------------------------------------------------
-if vista_activa == "🎹 Estudio de Producción IA":
-    st.title("🎹 BASA Universal AI Studio — Consola de Creación")
-    st.markdown(
-        "Compón letras, configura instrumentación dominicana y latina, mezcla canales en vivo y descarga pistas en **WAV PCM**."
-    )
-
-    if HTML_MODULE_PATH.exists():
-        html_content = HTML_MODULE_PATH.read_text(encoding="utf-8")
-        components.html(html_content, height=880, scrolling=True)
-    else:
-        st.warning(
-            f"No se encontró el archivo `{HTML_MODULE_PATH}` en la carpeta raíz. "
-            "Guarda el código HTML generado previamente con el nombre `studio_audio.html` junto a `app.py`."
-        )
-
-    with st.expander("➕ Registro Rápido de Nueva Producción en la Base de Datos BASA"):
-        with st.form("form_registro_rapido", clear_on_submit=True):
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                titulo_in = st.text_input("Título de la Obra *", placeholder="Ej. Caminos de Pimentel")
-                persona_in = st.selectbox(
-                    "Sello / Alias Creativo",
-                    ["El Forense de la Música", "Aroma de Café", "BASA Audio Visual"],
-                )
-            with col2:
-                genero_in = st.selectbox(
-                    "Género Musical",
-                    [
-                        "Merengue Típico (Perico Ripiao)",
-                        "Bachata",
-                        "Bolero Clásico",
-                        "Salsa Dura",
-                        "Merengue de Calle",
-                        "Dembow",
-                        "Ranchera",
-                    ],
-                )
-                modelo_in = st.selectbox(
-                    "Motor IA Utilizado",
-                    [
-                        "BASA-Audio-V10 Pro",
-                        "BASA-Típico-Engine",
-                        "BASA-Vocal-Master",
-                        "BASA-Acústico-Bolero",
-                    ],
-                )
-            with col3:
-                bpm_in = st.number_input("Tempo (BPM)", min_value=60, max_value=200, value=130)
-                duracion_in = st.number_input("Duración (segundos)", min_value=15, max_value=300, value=45)
-
-            instrumentos_in = st.text_input(
-                "Instrumentación Principal",
-                value="Acordeón, Güira Metálica, Tambora, Bajo",
-            )
-            letra_in = st.text_area(
-                "Letra Estructurada ([Intro], [Verso], [Coro], [Mambo])",
-                height=140,
-            )
-            estado_in = st.selectbox("Estado del Proyecto", ["Maqueta", "En Producción", "Masterizado", "Publicado"])
-
-            if st.form_submit_button("💾 Guardar Proyecto en Base de Datos", type="primary"):
-                if not titulo_in.strip():
-                    st.error("El título de la obra es obligatorio.")
-                else:
-                    guardar_proyecto(
-                        titulo_in,
-                        persona_in,
-                        genero_in,
-                        bpm_in,
-                        duracion_in,
-                        modelo_in,
-                        instrumentos_in,
-                        letra_in,
-                        estado_in,
-                    )
-                    st.success(f"Proyecto '{titulo_in}' guardado correctamente.")
-                    st.rerun()
-
-
-# -------------------------------------------------------------------
-# VISTA 2: GESTIÓN DE PROYECTOS Y CATÁLOGO
-# -------------------------------------------------------------------
-elif vista_activa == "📂 Gestión de Proyectos y Catálogo":
-    st.title("📂 Gestión de Proyectos Musicales — Catálogo BASA")
-
-    col_f1, col_f2, col_f3 = st.columns([2, 1, 1])
-    with col_f1:
-        busqueda = st.text_input("🔍 Buscar por título, letra o instrumento", "")
-    with col_f2:
-        filtro_alias = st.selectbox(
-            "Filtrar por Alias",
-            ["Todos"] + sorted(df_proyectos["persona_artistica"].unique().tolist()),
-        )
-    with col_f3:
-        filtro_estado = st.selectbox(
-            "Filtrar por Estado",
-            ["Todos", "Maqueta", "En Producción", "Masterizado", "Publicado"],
-        )
-
-    df_filtrado = df_proyectos.copy()
-    if busqueda.strip():
-        mask = (
-            df_filtrado["titulo"].str.contains(busqueda, case=False, na=False)
-            | df_filtrado["letra"].str.contains(busqueda, case=False, na=False)
-            | df_filtrado["instrumentacion"].str.contains(busqueda, case=False, na=False)
-        )
-        df_filtrado = df_filtrado[mask]
-    if filtro_alias != "Todos":
-        df_filtrado = df_filtrado[df_filtrado["persona_artistica"] == filtro_alias]
-    if filtro_estado != "Todos":
-        df_filtrado = df_filtrado[df_filtrado["estado"] == filtro_estado]
-
-    st.dataframe(
-        df_filtrado[
-            [
-                "id",
-                "titulo",
-                "persona_artistica",
-                "genero",
-                "bpm",
-                "duracion_seg",
-                "estado",
-                "fecha_creacion",
-            ]
-        ],
-        use_container_width=True,
-        hide_index=True,
-    )
-
-    st.divider()
-    if not df_filtrado.empty:
-        st.subheader("🛠️ Inspección y Control de Obra Seleccionada")
-        opciones = {
-            f"#{row['id']} — {row['titulo']} ({row['genero']})": row["id"]
-            for _, row in df_filtrado.iterrows()
+      // 2. CANAL BAJO / TUMBAO
+      if (!stemState.bass.muted && stemState.bass.vol > 0) {
+        const bVol = stemState.bass.vol * 0.35;
+        if (step === 0 || step === 6 || step === 8 || step === 14) {
+          const bassNote = (step === 8 || step === 14) ? scale[4] / 2 : scale[0] / 2;
+          playTone(now, bassNote, 'triangle', 0.22, bVol);
         }
-        seleccion = st.selectbox("Selecciona una producción:", list(opciones.keys()))
-        id_sel = opciones[seleccion]
-        fila = df_filtrado[df_filtrado["id"] == id_sel].iloc[0]
+      }
 
-        c1, c2 = st.columns([2, 1])
-        with c1:
-            st.markdown(f"**Instrumentación:** {fila['instrumentacion']}")
-            st.text_area("Letra y Estructura", value=fila["letra"], height=200, disabled=True)
-        with c2:
-            st.markdown(f"**Alias:** {fila['persona_artistica']}")
-            st.markdown(f"**Motor IA:** {fila['modelo_ia']}")
-            st.markdown(f"**Tempo / Duración:** {fila['bpm']} BPM | {fila['duracion_seg']}s")
+      // 3. CANAL ARMONÍA / REQUINTO / PIANO MONTUNO
+      if (!stemState.chord.muted && stemState.chord.vol > 0) {
+        const cVol = stemState.chord.vol * 0.22;
+        if (step % 4 === 2 || step === 0) {
+          const chordRoot = scale[(step / 4) % 4];
+          playTone(now, chordRoot, 'sine', 0.18, cVol);
+          playTone(now, chordRoot * 1.25, 'sine', 0.18, cVol * 0.8);
+        }
+      }
 
-            nuevo_estado = st.selectbox(
-                "Actualizar Estado",
-                ["Maqueta", "En Producción", "Masterizado", "Publicado"],
-                index=["Maqueta", "En Producción", "Masterizado", "Publicado"].index(fila["estado"]),
-            )
-            if st.button("✅ Aplicar Cambio de Estado", type="primary", use_container_width=True):
-                actualizar_estado_proyecto(int(id_sel), nuevo_estado)
-                st.success("Estado actualizado.")
-                st.rerun()
+      // 4. CANAL MELODÍA LÍDER (Acordeón / Requinto / Metales)
+      if (!stemState.lead.muted && stemState.lead.vol > 0) {
+        const lVol = stemState.lead.vol * 0.24;
+        // Patrón melódico sincopado
+        const melodyPattern = [0, -1, 2, -1, 4, 3, 2, -1, 5, -1, 4, 2, 1, -1, 0, -1];
+        const noteIndex = melodyPattern[step];
+        if (noteIndex >= 0) {
+          const freq = scale[noteIndex % scale.length] * (track.genre === 'Bachata' ? 2 : 1);
+          const waveType = track.genre.includes('Merengue') || track.genre === 'Salsa Dura' ? 'sawtooth' : 'triangle';
+          playTone(now, freq, waveType, 0.16, lVol);
+        }
+      }
+    }
 
-            if st.button("🗑️ Eliminar Proyecto", type="secondary", use_container_width=True):
-                eliminar_proyecto(int(id_sel))
-                st.warning("Proyecto eliminado de la base de datos.")
-                st.rerun()
+    function playDrumKick(time, gainVal, startFreq = 70) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(startFreq * 1.8, time);
+      osc.frequency.exponentialRampToValueAtTime(38, time + 0.12);
 
+      gain.gain.setValueAtTime(gainVal, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.16);
 
-# -------------------------------------------------------------------
-# VISTA 3: IMPORTAR / EXPORTAR RESPALDOS (JSON Y EXCEL)
-# -------------------------------------------------------------------
-elif vista_activa == "📥 Importar / Exportar Respaldos":
-    st.title("📥 Importación desde Estudio HTML y Exportación de Catálogo")
+      osc.connect(gain);
+      gain.connect(masterGainNode);
+      osc.start(time);
+      osc.stop(time + 0.17);
+    }
 
-    col_imp, col_exp = st.columns(2)
+    function playPercussionSlap(time, gainVal) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(320, time);
+      osc.frequency.exponentialRampToValueAtTime(110, time + 0.08);
 
-    with col_imp:
-        st.subheader("⬆️ Importar Proyecto JSON desde el Estudio")
-        st.markdown(
-            "Sube el archivo `.json` descargado desde el botón **Exportar JSON** de la consola musical para registrarlo en SQLite."
-        )
-        archivo_json = st.file_uploader("Seleccionar archivo .json", type=["json"])
-        if archivo_json is not None:
-            try:
-                datos = json.load(archivo_json)
-                # Soporta tanto un objeto único como una lista de pistas
-                registros = datos if isinstance(datos, list) else [datos]
-                st.write(f"Se detectaron **{len(registros)}** pista(s) en el archivo.")
-                if st.button("📥 Importar a Base de Datos BASA", type="primary"):
-                    for item in registros:
-                        guardar_proyecto(
-                            titulo=item.get("title", item.get("titulo", "Pista Importada")),
-                            persona=item.get("artist", "El Forense de la Música"),
-                            genero=item.get("genre", item.get("genero", "Merengue Típico")),
-                            bpm=int(item.get("bpm", 128)),
-                            duracion=int(item.get("duration", 45)),
-                            modelo=item.get("model", "BASA-Audio-V10 Pro"),
-                            instrumentos=", ".join(item.get("instruments", []))
-                            if isinstance(item.get("instruments"), list)
-                            else str(item.get("instruments", "")),
-                            letra=item.get("lyrics", item.get("letra", "")),
-                            estado="Maqueta",
-                        )
-                    st.success("Importación completada con éxito.")
-                    st.rerun()
-            except Exception as e:
-                st.error(f"Error al procesar el archivo JSON: {e}")
+      gain.gain.setValueAtTime(gainVal, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.09);
 
-    with col_exp:
-        st.subheader("⬇️ Descargar Catálogo Completo")
-        st.markdown(
-            "Exporta todo el inventario de canciones, letras, tiempos y metadatos para registro autoral o distribución."
-        )
-        if not df_proyectos.empty:
-            excel_bytes = exportar_excel(df_proyectos)
-            st.download_button(
-                label="📊 Descargar Catálogo en Excel (.xlsx)",
-                data=excel_bytes,
-                file_name=f"Catalogo_BASA_Studio_{datetime.now().strftime('%Y%m%d')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                type="primary",
-                use_container_width=True,
-            )
+      osc.connect(gain);
+      gain.connect(masterGainNode);
+      osc.start(time);
+      osc.stop(time + 0.1);
+    }
 
-            json_bytes = df_proyectos.to_json(orient="records", indent=2, force_ascii=False).encode("utf-8")
-            st.download_button(
-                label="🧾 Descargar Respaldo Integral (.json)",
-                data=json_bytes,
-                file_name=f"Respaldo_BASA_Studio_{datetime.now().strftime('%Y%m%d')}.json",
-                mime="application/json",
-                use_container_width=True,
-            )
+    function playGuiraScrape(time, gainVal) {
+      const bufferSize = audioCtx.sampleRate * 0.045;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.value = 5500;
+
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(gainVal, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.045);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(masterGainNode);
+      noise.start(time);
+    }
+
+    function playTone(time, freq, type, dur, gainVal) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      const filter = audioCtx.createBiquadFilter();
+
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, time);
+
+      filter.type = 'lowpass';
+      filter.frequency.value = type === 'sawtooth' ? 1800 : 3200;
+
+      gain.gain.setValueAtTime(0.001, time);
+      gain.gain.linearRampToValueAtTime(gainVal, time + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(masterGainNode);
+
+      osc.start(time);
+      osc.stop(time + dur + 0.02);
+    }
+
+    /**
+     * ============================================================================
+     * CONTROLES DEL ESTUDIO MULTIPISTA
+     * ============================================================================
+     */
+    function updateStemVolume(stem, val) {
+      stemState[stem].vol = val / 100;
+      document.getElementById(`val-${stem}`).textContent = `${val}%`;
+    }
+
+    function toggleMuteStem(stem) {
+      stemState[stem].muted = !stemState[stem].muted;
+      const btn = document.getElementById(`mute-${stem}`);
+      if (stemState[stem].muted) {
+        btn.textContent = 'MUTE';
+        btn.classList.add('bg-red-100', 'text-red-700', 'border-red-300');
+      } else {
+        btn.textContent = 'ON';
+        btn.classList.remove('bg-red-100', 'text-red-700', 'border-red-300');
+      }
+    }
+
+    function resetMixerStems() {
+      const defaults = { perc: 85, bass: 90, chord: 75, lead: 80 };
+      Object.keys(defaults).forEach(k => {
+        stemState[k].vol = defaults[k] / 100;
+        stemState[k].muted = false;
+        document.getElementById(`vol-${k}`).value = defaults[k];
+        document.getElementById(`val-${k}`).textContent = `${defaults[k]}%`;
+        const btn = document.getElementById(`mute-${k}`);
+        btn.textContent = 'ON';
+        btn.classList.remove('bg-red-100', 'text-red-700', 'border-red-300');
+      });
+      showToast('Niveles de consola multipista restablecidos.', 'info');
+    }
+
+    /**
+     * ============================================================================
+     * VISUALIZADOR DE FRECUENCIAS EN CANVAS RESPONSIVO
+     * ============================================================================
+     */
+    function initVisualizerCanvas() {
+      const canvas = document.getElementById('visualizer-canvas');
+      const ctx = canvas.getContext('2d');
+
+      function resizeCanvas() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = rect.width * window.devicePixelRatio;
+        canvas.height = rect.height * window.devicePixelRatio;
+      }
+
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+
+      function draw() {
+        requestAnimationFrame(draw);
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+
+        const bars = 24;
+        const gap = 3 * window.devicePixelRatio;
+        const barWidth = (w - gap * (bars - 1)) / bars;
+
+        let freqData = null;
+        if (analyserNode && isPlaying) {
+          freqData = new Uint8Array(analyserNode.frequencyBinCount);
+          analyserNode.getByteFrequencyData(freqData);
+        }
+
+        for (let i = 0; i < bars; i++) {
+          let magnitude = 0.12;
+          if (freqData && isPlaying) {
+            const val = freqData[i % freqData.length] / 255;
+            magnitude = Math.max(0.12, val);
+          }
+
+          const barHeight = magnitude * (h * 0.85);
+          const x = i * (barWidth + gap);
+          const y = (h - barHeight) / 2;
+
+          ctx.fillStyle = isPlaying ? '#0284C7' : '#CBD5E1';
+          ctx.beginPath();
+          ctx.roundRect(x, y, barWidth, barHeight, 3);
+          ctx.fill();
+        }
+      }
+      draw();
+    }
+
+    /**
+     * ============================================================================
+     * RENDERIZADO OFFLINE Y DESCARGA DE ARCHIVO WAV REAL
+     * ============================================================================
+     */
+    function downloadCurrentTrackWAV() {
+      if (!currentTrackId) return;
+      downloadTrackWAVById(currentTrackId);
+    }
+
+    async function downloadTrackWAVById(trackId) {
+      const track = libraryTracks.find(t => t.id === trackId);
+      if (!track) return;
+
+      showToast(`Renderizando master WAV de "${track.title}"...`, 'info');
+
+      try {
+        // Renderizar 8 segundos de muestra rítmica en OfflineAudioContext a 44.1kHz
+        const sampleRate = 44100;
+        const renderSeconds = 8;
+        const offlineCtx = new OfflineAudioContext(1, sampleRate * renderSeconds, sampleRate);
+        const preset = GENRE_PRESETS[track.genre] || GENRE_PRESETS['Merengue Típico'];
+        const scale = preset.scaleFreqs;
+        const stepSec = 60 / track.bpm / 4;
+        const totalSteps = Math.floor(renderSeconds / stepSec);
+
+        for (let s = 0; s < totalSteps; s++) {
+          const t = s * stepSec;
+          const stepMod = s % 16;
+
+          // Percusión
+          if (stepMod % 4 === 0) {
+            const osc = offlineCtx.createOscillator();
+            const g = offlineCtx.createGain();
+            osc.frequency.setValueAtTime(110, t);
+            osc.frequency.exponentialRampToValueAtTime(40, t + 0.12);
+            g.gain.setValueAtTime(0.4, t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+            osc.connect(g);
+            g.connect(offlineCtx.destination);
+            osc.start(t);
+            osc.stop(t + 0.16);
+          }
+
+          // Melodía y Bajo
+          if (stepMod % 2 === 0) {
+            const osc = offlineCtx.createOscillator();
+            const g = offlineCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(scale[(s / 2) % scale.length], t);
+            g.gain.setValueAtTime(0.18, t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+            osc.connect(g);
+            g.connect(offlineCtx.destination);
+            osc.start(t);
+            osc.stop(t + 0.2);
+          }
+        }
+
+        const renderedBuffer = await offlineCtx.startRendering();
+        const wavBlob = audioBufferToWavBlob(renderedBuffer);
+        const url = URL.createObjectURL(wavBlob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${track.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_BASA.wav`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showToast(`Archivo WAV descargado: ${track.title}`, 'success');
+      } catch (error) {
+        console.error(error);
+        showToast('No se pudo generar el archivo WAV en este navegador.', 'warn');
+      }
+    }
+
+    function audioBufferToWavBlob(buffer) {
+      const numOfChan = buffer.numberOfChannels;
+      const length = buffer.length * numOfChan * 2 + 44;
+      const out = new ArrayBuffer(length);
+      const view = new DataView(out);
+      const channels = [];
+      let sample = 0;
+      let offset = 0;
+      let pos = 0;
+
+      const setUint16 = (data) => { view.setUint16(pos, data, true); pos += 2; };
+      const setUint32 = (data) => { view.setUint32(pos, data, true); pos += 4; };
+
+      // Cabecera RIFF WAVE
+      setUint32(0x46464952); // "RIFF"
+      setUint32(length - 8);
+      setUint32(0x45564157); // "WAVE"
+      setUint32(0x20746d66); // "fmt "
+      setUint32(16);
+      setUint16(1); // PCM
+      setUint16(numOfChan);
+      setUint32(buffer.sampleRate);
+      setUint32(buffer.sampleRate * 2 * numOfChan);
+      setUint16(numOfChan * 2);
+      setUint16(16);
+      setUint32(0x61746164); // "data"
+      setUint32(length - pos - 4);
+
+      for (let i = 0; i < buffer.numberOfChannels; i++) {
+        channels.push(buffer.getChannelData(i));
+      }
+
+      while (pos < length) {
+        for (let i = 0; i < numOfChan; i++) {
+          sample = Math.max(-1, Math.min(1, channels[i][offset]));
+          sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+          view.setInt16(pos, sample, true);
+          pos += 2;
+        }
+        offset++;
+      }
+
+      return new Blob([out], { type: 'audio/wav' });
+    }
+
+    /**
+     * ============================================================================
+     * EXPORTACIONES (PROYECTO JSON, LETRA TXT Y GUION/PROMPT)
+     * ============================================================================
+     */
+    function exportProjectJSON() {
+      const projectData = {
+        studio: 'BASA Universal AI Studio',
+        version: '10.4',
+        exportedAt: new Date().toISOString(),
+        activeModel: document.getElementById('ai-model-select').value,
+        currentDraft: {
+          title: document.getElementById('track-title').value,
+          genre: document.getElementById('track-genre').value,
+          bpm: document.getElementById('track-bpm').value,
+          key: document.getElementById('track-key').value,
+          instruments: Array.from(selectedInstruments),
+          lyrics: document.getElementById('track-lyrics').value
+        },
+        library: libraryTracks
+      };
+
+      const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `BASA_Studio_Proyecto_${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Proyecto completo exportado en JSON.', 'success');
+    }
+
+    function downloadLyricsTXT() {
+      const title = document.getElementById('track-title').value || 'Letra_BASA';
+      const genre = document.getElementById('track-genre').value;
+      const bpm = document.getElementById('track-bpm').value;
+      const lyrics = document.getElementById('track-lyrics').value;
+
+      const content = `BASA UNIVERSAL AI STUDIO — HOJA DE LETRA Y ARREGLO\nTítulo: ${title}\nGénero: ${genre} | Tempo: ${bpm} BPM\nInstrumentos: ${Array.from(selectedInstruments).join(', ')}\n==================================================\n\n${lyrics}`;
+
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${title.replace(/[^a-z0-9]/gi, '_')}_Letra.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Archivo de letra TXT descargado.', 'success');
+    }
+
+    function exportPromptScript() {
+      const title = document.getElementById('track-title').value;
+      const genre = document.getElementById('track-genre').value;
+      const bpm = document.getElementById('track-bpm').value;
+      const key = document.getElementById('track-key').value;
+      const voice = document.getElementById('track-voice').value;
+      const model = document.getElementById('ai-model-select').value;
+
+      const script = `[BASA STUDIO PROMPT] Modelo: ${model} | Título: "${title}" | Género: ${genre} | ${bpm} BPM | Escala: ${key} | Voz: ${voice} | Instrumentación: ${Array.from(selectedInstruments).join(', ')}`;
+
+      // Uso de textarea temporal + execCommand('copy') para máxima compatibilidad en iframes
+      const tempInput = document.createElement('textarea');
+      tempInput.value = script;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+
+      showToast('Guion/Prompt copiado al portapapeles.', 'success');
+    }
+
+    /**
+     * ============================================================================
+     * UTILIDADES: TAP TEMPO, FORMATO Y NOTIFICACIONES TOAST
+     * ============================================================================
+     */
+    function handleTapTempo() {
+      const now = Date.now();
+      if (tapTimes.length > 0 && now - tapTimes[tapTimes.length - 1] > 2500) {
+        tapTimes = [];
+      }
+      tapTimes.push(now);
+      if (tapTimes.length > 6) tapTimes.shift();
+
+      if (tapTimes.length >= 2) {
+        let intervals = 0;
+        for (let i = 1; i < tapTimes.length; i++) {
+          intervals += tapTimes[i] - tapTimes[i - 1];
+        }
+        const avgMs = intervals / (tapTimes.length - 1);
+        lastTappedBpm = Math.max(65, Math.min(175, Math.round(60000 / avgMs)));
+        document.getElementById('tap-bpm-result').textContent = lastTappedBpm;
+      }
+    }
+
+    function applyTappedBpm() {
+      document.getElementById('track-bpm').value = lastTappedBpm;
+      updateRangeLabels();
+      switchWorkspaceTab('create');
+      setCreationMode('custom');
+      showToast(`Tempo de ${lastTappedBpm} BPM aplicado al compositor.`, 'success');
+    }
+
+    function formatSeconds(totalSec) {
+      const mins = Math.floor(totalSec / 60);
+      const secs = totalSec % 60;
+      return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+
+      const styles = {
+        success: 'bg-white border-l-4 border-[#0284C7] text-black',
+        info: 'bg-white border-l-4 border-[#38BDF8] text-black',
+        warn: 'bg-white border-l-4 border-amber-500 text-black'
+      };
+
+      const icons = {
+        success: 'fa-circle-check text-[#0284C7]',
+        info: 'fa-circle-info text-[#0284C7]',
+        warn: 'fa-triangle-exclamation text-amber-600'
+      };
+
+      toast.className = `${styles[type] || styles.info} border border-[#CBD5E1] rounded-xl p-3 shadow-md flex items-center gap-2.5 text-xs font-semibold pointer-events-auto transition-all duration-300`;
+      toast.innerHTML = `
+        <i class="fa-solid ${icons[type] || icons.info} text-sm shrink-0"></i>
+        <span class="flex-1">${message}</span>
+      `;
+
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-6px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+  </script>
+</body>
+</html>
