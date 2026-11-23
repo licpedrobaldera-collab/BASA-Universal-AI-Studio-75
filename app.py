@@ -527,20 +527,23 @@ def ia_combinar_instrumentacion(
 
 
 # ============================================================================
-# MOTOR DE SINTESIS MUSICAL DSP MULTI-TIMBRE (FISICO + ELECTRONICO WAV 16-BIT)
+# MOTOR DE SINTESIS MUSICAL DSP MULTI-TIMBRE (BLOQUES MAESTROS HASTA 60 MIN)
 # ============================================================================
 def generar_pista_instrumental_wav(
     out_path: Path,
     genero: str = "Merengue de Calle / Mambo",
     bpm: int = 135,
     tonalidad: str = "Em (Mi Menor)",
-    duracion_seg: int = 24,
+    duracion_seg: int = 180,
     instrumentos: list[str] | None = None,
 ) -> Path:
     sample_rate = 44100
     bpm = max(65, min(195, int(bpm or 132)))
-    duracion_seg = max(12, min(90, int(duracion_seg or 24)))
-    total_samples = sample_rate * duracion_seg
+    duracion_seg = max(15, min(3600, int(duracion_seg or 180)))
+
+    # Sintetiza un bloque maestro de 16 seg (Intro/Verso/Coro/Mambo) en <0.3s sin saturar RAM
+    ciclo_seg = min(16, duracion_seg)
+    ciclo_samples = sample_rate * ciclo_seg
 
     insts_low = " | ".join(instrumentos or []).lower()
     g_low = genero.lower()
@@ -563,9 +566,9 @@ def generar_pista_instrumental_wav(
 
     step_dur = 60.0 / bpm / 4.0
     step_samples = max(1, int(sample_rate * step_dur))
-    total_steps = max(16, total_samples // step_samples)
+    total_steps = max(16, ciclo_samples // step_samples)
 
-    mix = [0.0] * total_samples
+    mix = [0.0] * ciclo_samples
     rng = random.Random(2026)
 
     pat_verso = [0, -1, 2, -1, 4, -1, 2, -1, 3, -1, 2, -1, 1, -1, 0, -1]
@@ -576,7 +579,7 @@ def generar_pista_instrumental_wav(
         bar = s // 16
         ratio = s / float(total_steps)
         start_idx = s * step_samples
-        if start_idx >= total_samples:
+        if start_idx >= ciclo_samples:
             break
 
         deg = prog_grados[bar % 4]
@@ -584,19 +587,11 @@ def generar_pista_instrumental_wav(
         chord_third = escala[(deg + 2) % len(escala)]
         chord_fifth = escala[(deg + 4) % len(escala)]
 
-        if ratio < 0.12:
-            seccion, energia = "intro", 0.76
-        elif ratio < 0.38:
-            seccion, energia = "verso", 0.92
-        elif ratio < 0.65:
-            seccion, energia = "coro", 1.06
-        elif ratio < 0.88:
-            seccion, energia = "mambo", 1.15
-        else:
-            seccion, energia = "outro", 0.74
+        energia = 0.85 if ratio < 0.25 else (1.0 if ratio < 0.65 else 1.15)
+        seccion = "verso" if ratio < 0.5 else "mambo"
 
         if step % 4 == 0 or (seccion == "mambo" and step == 14):
-            k_len = min(int(sample_rate * 0.18), total_samples - start_idx)
+            k_len = min(int(sample_rate * 0.18), ciclo_samples - start_idx)
             f_ini = 112.0 if "kick" in insts_low else 132.0
             for i in range(k_len):
                 t = i / sample_rate
@@ -604,8 +599,8 @@ def generar_pista_instrumental_wav(
                 env = math.exp(-t * 17.0) * 0.35 * energia
                 mix[start_idx + i] += math.sin(2.0 * math.pi * freq * t) * env
 
-        if step in (2, 6, 10, 14) or (seccion in ("coro", "mambo") and step in (3, 11, 15)):
-            s_len = min(int(sample_rate * 0.085), total_samples - start_idx)
+        if step in (2, 6, 10, 14) or (seccion == "mambo" and step in (3, 11, 15)):
+            s_len = min(int(sample_rate * 0.085), ciclo_samples - start_idx)
             for i in range(s_len):
                 t = i / sample_rate
                 freq = 120.0 + 225.0 * math.exp(-t * 36.0)
@@ -618,7 +613,7 @@ def generar_pista_instrumental_wav(
             is_strong = step % 4 == 0
             g_dur = 0.065 if is_strong else 0.030
             g_amp = (0.14 if is_strong else (0.08 if step % 2 == 0 else 0.05)) * energia
-            g_len = min(int(sample_rate * g_dur), total_samples - start_idx)
+            g_len = min(int(sample_rate * g_dur), ciclo_samples - start_idx)
             prev_n = 0.0
             for i in range(g_len):
                 t = i / sample_rate
@@ -628,10 +623,10 @@ def generar_pista_instrumental_wav(
                 env = math.exp(-t * (26.0 if is_strong else 55.0)) * g_amp
                 mix[start_idx + i] += hp * env
 
-        if seccion != "intro" and step in (0, 6, 8, 14):
+        if step in (0, 6, 8, 14):
             b_freq = (chord_fifth / 2.0) if step in (6, 14) else (chord_root / 2.0)
             b_dur = 0.36 if has_808 else 0.22
-            b_len = min(int(sample_rate * b_dur), total_samples - start_idx)
+            b_len = min(int(sample_rate * b_dur), ciclo_samples - start_idx)
             for i in range(b_len):
                 t = i / sample_rate
                 env = min(1.0, t / 0.012) * math.exp(-t * (5.2 if has_808 else 7.5)) * 0.32
@@ -640,7 +635,7 @@ def generar_pista_instrumental_wav(
 
         if step in (0, 4, 8, 12) or (not has_pad and step in (2, 6, 10, 14)):
             c_dur = 0.34 if has_pad else 0.16
-            c_len = min(int(sample_rate * c_dur), total_samples - start_idx)
+            c_len = min(int(sample_rate * c_dur), ciclo_samples - start_idx)
             for i in range(c_len):
                 t = i / sample_rate
                 env = min(1.0, t / 0.025) * math.exp(-t * (6.0 if has_pad else 13.0)) * 0.11
@@ -651,45 +646,52 @@ def generar_pista_instrumental_wav(
                 )
                 mix[start_idx + i] += chord_sig * env
 
-        if seccion != "outro":
-            patron = pat_mambo if seccion in ("coro", "mambo") else pat_verso
-            nota_idx = patron[step]
-            if nota_idx >= 0:
-                octava = 2.0 if ("bachata" in g_low or has_strings_or_plucked) else 1.0
-                m_freq = escala[(deg + nota_idx) % len(escala)] * octava
-                m_len = min(int(sample_rate * 0.17), total_samples - start_idx)
-                for i in range(m_len):
-                    t = i / sample_rate
-                    env = min(1.0, t / 0.012) * math.exp(-t * 10.5) * 0.15 * energia
-                    sig = 0.0
-                    if has_brass_or_acc:
-                        sig += (
-                            math.sin(2.0 * math.pi * m_freq * t)
-                            + 0.48 * math.sin(4.0 * math.pi * m_freq * t)
-                            + 0.24 * math.sin(6.0 * math.pi * m_freq * t)
-                        )
-                    if has_strings_or_plucked or not (has_brass_or_acc or has_synth_lead):
-                        sig += 0.85 * math.sin(2.0 * math.pi * m_freq * t) + 0.22 * math.sin(4.0 * math.pi * m_freq * t)
-                    if has_synth_lead:
-                        sig += 0.55 * (
-                            math.sin(2.0 * math.pi * (m_freq * 0.996) * t)
-                            + math.sin(2.0 * math.pi * (m_freq * 1.004) * t)
-                        )
-                    mix[start_idx + i] += sig * env
+        patron = pat_mambo if seccion == "mambo" else pat_verso
+        nota_idx = patron[step]
+        if nota_idx >= 0:
+            octava = 2.0 if ("bachata" in g_low or has_strings_or_plucked) else 1.0
+            m_freq = escala[(deg + nota_idx) % len(escala)] * octava
+            m_len = min(int(sample_rate * 0.17), ciclo_samples - start_idx)
+            for i in range(m_len):
+                t = i / sample_rate
+                env = min(1.0, t / 0.012) * math.exp(-t * 10.5) * 0.15 * energia
+                sig = 0.0
+                if has_brass_or_acc:
+                    sig += (
+                        math.sin(2.0 * math.pi * m_freq * t)
+                        + 0.48 * math.sin(4.0 * math.pi * m_freq * t)
+                        + 0.24 * math.sin(6.0 * math.pi * m_freq * t)
+                    )
+                if has_strings_or_plucked or not (has_brass_or_acc or has_synth_lead):
+                    sig += 0.85 * math.sin(2.0 * math.pi * m_freq * t) + 0.22 * math.sin(4.0 * math.pi * m_freq * t)
+                if has_synth_lead:
+                    sig += 0.55 * (
+                        math.sin(2.0 * math.pi * (m_freq * 0.996) * t)
+                        + math.sin(2.0 * math.pi * (m_freq * 1.004) * t)
+                    )
+                mix[start_idx + i] += sig * env
 
     peak = max((abs(x) for x in mix), default=1.0)
     norm_factor = 0.88 / peak if peak > 0.001 else 1.0
 
-    pcm_bytes = bytearray()
+    base_pcm = bytearray()
     for sample_val in mix:
         clamped = max(-1.0, min(1.0, sample_val * norm_factor))
-        pcm_bytes.extend(struct.pack("<h", int(clamped * 32767)))
+        base_pcm.extend(struct.pack("<h", int(clamped * 32767)))
+
+    bytes_por_segundo = sample_rate * 2
+    bytes_objetivo = duracion_seg * bytes_por_segundo
 
     with wave.open(str(out_path), "wb") as wf:
         wf.setnchannels(1)
         wf.setsampwidth(2)
         wf.setframerate(sample_rate)
-        wf.writeframes(bytes(pcm_bytes))
+        escritos = 0
+        while escritos < bytes_objetivo:
+            restante = bytes_objetivo - escritos
+            chunk = base_pcm if restante >= len(base_pcm) else base_pcm[:restante]
+            wf.writeframes(bytes(chunk))
+            escritos += len(chunk)
 
     return out_path
 
@@ -700,10 +702,11 @@ def mezclar_voz_y_pista(voz_mp3: Path, pista_wav: Path, mezcla_out: Path) -> boo
     try:
         voz = AudioSegment.from_file(str(voz_mp3)) + 2
         base = AudioSegment.from_wav(str(pista_wav)) - 4
-        while len(base) < len(voz) + 2000:
+        duracion_objetivo = max(len(base), len(voz) + 2000)
+        while len(base) < duracion_objetivo:
             base = base + base
-        base = base[: len(voz) + 2000].fade_out(1500)
-        final_mix = base.overlay(voz, position=600)
+        base = base[:duracion_objetivo].fade_out(2000)
+        final_mix = base.overlay(voz, position=800)
         final_mix.export(str(mezcla_out), format="mp3", bitrate="192k")
         return mezcla_out.exists() and mezcla_out.stat().st_size > 0
     except Exception:
@@ -754,10 +757,21 @@ def generate_cover_5k(
     draw.rectangle([margin, margin, W - margin, H - margin], outline=accent, width=max(4, stroke // 2))
 
     scale_f = W / 1920.0
+    font_candidates = [
+        "arial.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    ]
+    loaded_font_path = next((fp for fp in font_candidates if Path(fp).exists()), None)
     try:
-        f_title = ImageFont.truetype("arial.ttf", int(96 * scale_f))
-        f_sub = ImageFont.truetype("arial.ttf", int(48 * scale_f))
-        f_small = ImageFont.truetype("arial.ttf", int(34 * scale_f))
+        if loaded_font_path:
+            f_title = ImageFont.truetype(loaded_font_path, int(96 * scale_f))
+            f_sub = ImageFont.truetype(loaded_font_path, int(48 * scale_f))
+            f_small = ImageFont.truetype(loaded_font_path, int(34 * scale_f))
+        else:
+            f_title = ImageFont.load_default(size=int(90 * scale_f))
+            f_sub = ImageFont.load_default(size=int(46 * scale_f))
+            f_small = ImageFont.load_default(size=int(32 * scale_f))
     except Exception:
         f_title = ImageFont.load_default()
         f_sub = ImageFont.load_default()
@@ -778,7 +792,7 @@ def generate_cover_5k(
 
 
 # ============================================================================
-# IA - DETECCION AUTOMATICA DE GENERO, VOZ Y LETRA
+# IA - DETECCION AUTOMATICA DE GENERO, VOZ, LETRA Y SERIES HASTA 40 EPISODIOS
 # ============================================================================
 def ia_detectar_genero_desde_letra(letra: str, ultima_seleccion: list[str]) -> tuple[str, str, int]:
     t = letra.lower()
@@ -860,17 +874,66 @@ def ia_expandir_desde_palabra(entrada: str, genero: str, modo: str) -> str:
     palabras = entrada.split()
     if len(palabras) <= 5:
         return (
-            f"[Verso]\n{entrada}. Que se escuche en la calle, que se baile en la fiesta.\n"
+            f"[Verso 1]\n{entrada}. Que se escuche en la calle, que se baile en la fiesta.\n"
             f"[Coro]\nRumbo a celebrar, larga vida y salud, bajo el amparo del Senor. "
-            f"Con {genero}, fusionando instrumentos fisicos y electronicos de BASA Productions."
+            f"Con {genero}, fusionando instrumentos fisicos y electronicos de BASA Productions.\n"
+            f"[Verso 2]\nDe Santo Domingo para el mundo entero, con alegria, fe y sentimiento verdadero.\n"
+            f"[Mambo / Climax]\nSubelo maestro, que la musica suena fuerte en BASA Radio y TV 24/7."
         )
-    return f"{entrada}\n\n[Coro IA - BASA]\nRumbo a celebrar, larga vida y salud, bajo el amparo del Senor, con {genero}, para el mundo entero."
+    return (
+        f"{entrada}\n\n[Coro IA - BASA]\n"
+        f"Rumbo a celebrar, larga vida y salud, bajo el amparo del Senor, con {genero}, para el mundo entero.\n"
+        f"[Puente & Cierre]\nProducido en BASA Universal AI Studio v13 — Lic. Pedro Baldera."
+    )
 
 
 def ia_combinar_generos(generos: list[str]) -> str:
     if len(generos) <= 1:
         return generos[0] if generos else "Fusion Mundial: Fisico + Electronico"
     return " + ".join(generos[:4]) + " - Fusion Mundial BASA"
+
+
+def ia_generar_serie_completa(
+    titulo: str,
+    sinopsis: str,
+    num_episodios: int,
+    estilo_visual: str,
+    genero_musical: str,
+    storyboard_base: str,
+) -> list[dict[str, str]]:
+    num_episodios = max(1, min(40, int(num_episodios)))
+    arcos_dramaticos = [
+        ("El Origen y la Promesa", "Se revelan los suenos, raices y el punto de partida de los protagonistas."),
+        ("La Primera Prueba", "Un obstaculo inesperado pone a prueba la fe, la familia y la determinacion."),
+        ("Alianzas en la Sombra", "Surgen nuevos aliados y decisiones que cambian el rumbo de la historia."),
+        ("El Punto de Quiebre", "La tension llega al limite cuando un secreto sale a la luz."),
+        ("Resurgir con Fuerza", "Tras la tormenta, comienza la reconstruccion con disciplina y coraje."),
+        ("Conquista y Legado", "El climax de la etapa culmina con triunfo, justicia y celebracion."),
+    ]
+    episodios: list[dict[str, str]] = []
+    for ep_num in range(1, num_episodios + 1):
+        arco_titulo, arco_desc = arcos_dramaticos[(ep_num - 1) % len(arcos_dramaticos)]
+        fase = (
+            "Acto I: Planteamiento"
+            if ep_num <= max(1, num_episodios // 3)
+            else ("Acto II: Confrontacion y Climax" if ep_num <= max(2, (2 * num_episodios) // 3) else "Acto III: Resolucion y Victoria")
+        )
+        guion_ep = (
+            f"EPISODIO {ep_num:02d} DE {num_episodios:02d} — {titulo.upper()}: {arco_titulo}\n"
+            f"Fase Dramatica: {fase} | Estilo Visual: {estilo_visual} | Banda Sonora: {genero_musical}\n"
+            f"Sinopsis Central: {sinopsis}\n"
+            f"Desarrollo del Capitulo: {arco_desc} "
+            f"Escenas clave basadas en: {storyboard_base.replace(chr(10), ' / ')[:320]}."
+        )
+        episodios.append(
+            {
+                "episodio": f"Ep. {ep_num:02d}",
+                "titulo": f"{titulo} - Ep. {ep_num:02d}: {arco_titulo}",
+                "fase": fase,
+                "guion": guion_ep,
+            }
+        )
+    return episodios
 
 
 # ============================================================================
@@ -892,11 +955,12 @@ def load_autosave_state() -> dict[str, Any]:
         "voice_type": "Automatico - IA elige mejor voz afinada",
         "tonalidad": "Em (Mi Menor)",
         "bpm": 134,
-        "duracion_pista": 24,
+        "duracion_pista": 180,
         "resolucion_visual": "5K Cinema Ultra HD (5120x2880)",
         "master_prompt": "",
         "cine_title": "El Lapiz Pesa Mas que el Pico",
-        "cine_ep": "Pelicula Completa 5K - T01",
+        "cine_ep": "Temporada 01 - Serie Completa",
+        "cine_num_episodios": 10,
         "cine_style": "Cine Epico / Hollywood Dorado",
         "cine_voice": "Voz Masculina",
         "cine_music_genre": "Score Cinematografico / Orquestal",
@@ -932,6 +996,7 @@ def autosave_callback() -> None:
         "ui_master_prompt": "master_prompt",
         "ui_cine_title": "cine_title",
         "ui_cine_ep": "cine_ep",
+        "ui_cine_num_episodios": "cine_num_episodios",
         "ui_cine_style": "cine_style",
         "ui_cine_voice": "cine_voice",
         "ui_cine_music_genre": "cine_music_genre",
@@ -1088,7 +1153,7 @@ def guardar_historico(
         "id": str(uuid.uuid4())[:8],
         "usuario": usuario,
         "titulo": titulo,
-        "letra": letra[:2500],
+        "letra": letra[:25000],
         "genero": genero,
         "instrumentos": instrumentos or [],
         "formato": formato,
@@ -1119,7 +1184,6 @@ def guardar_historico(
     )
     _save_json(LIBRARY_FILE, lib)
 
-    # Agregar automaticamente a la parrilla de la Emisora de Radio BASA 24/7
     if en_radio and archivos:
         playlist = _load_json(RADIO_PLAYLIST_FILE, [])
         if not isinstance(playlist, list):
@@ -1175,7 +1239,7 @@ def clean_text_for_tts(text: str) -> str:
     text = re.sub(r"\[[^\]]+\]", " ", text)
     text = re.sub(r"[*#_>~`]", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
-    return text[:1800] if len(text) > 1800 else text
+    return text[:25000] if len(text) > 25000 else text
 
 
 async def _tts_async(text: str, voice: str, rate: str, pitch: str, out_path: Path) -> bool:
@@ -1278,7 +1342,7 @@ def panel_radar_autonomo_10s() -> None:
 
 
 # ============================================================================
-# MAIN - BASA v13 EMISORA 24/7 + YOUTUBE + 5K + HISTORICO COMERCIAL
+# MAIN - BASA v13 EMISORA 24/7 + YOUTUBE + 5K + SERIES 40 EPISODIOS
 # ============================================================================
 def main() -> None:
     init_dirs()
@@ -1353,13 +1417,12 @@ def main() -> None:
             with open(zp, "rb") as f:
                 st.download_button("⬇ Descargar ZIP", f.read(), file_name=zp.name, mime="application/zip")
 
-    # Re-verificar consentimiento tras posible firma
     consent = verificar_consentimiento(usuario)
 
     tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(
         [
             "🎵 1. Estudio Musica Mundial IA",
-            "🎬 2. Cine / Series / Drama 5K",
+            "🎬 2. Cine / Peliculas / Series (Hasta 40 Ep.) 5K",
             "📻 3. Mi Emisora Radio & TV 24/7",
             "🚀 4. Publicar YouTube @Lic.PedroBaldera",
             "📚 5. Historico: Descargar / Vender",
@@ -1369,7 +1432,7 @@ def main() -> None:
     )
 
     # ========================================================================
-    # TAB 1: ESTUDIO MUSICA MUNDIAL IA
+    # TAB 1: ESTUDIO MUSICA MUNDIAL IA (DURACION FULL HASTA 10 MINUTOS)
     # ========================================================================
     with tab1:
         st.subheader("🎵 Orquestador Mundial: Instrumentos Fisicos + Electronica + Visual 5K")
@@ -1457,14 +1520,21 @@ def main() -> None:
                     key="ui_tonalidad",
                 )
             with c_dur:
-                duracion_sel = st.slider(
-                    "Duracion WAV (seg)",
-                    12,
-                    60,
-                    int(ui.get("duracion_pista", 24)),
-                    step=4,
-                    key="ui_duracion_pista",
+                duracion_opciones = {
+                    "Cancion Completa Radio Edit (3 min - 180s)": 180,
+                    "Cancion Extendida / Mambo Full (4 min - 240s)": 240,
+                    "Version Club / DJ Mix Full (5 min - 300s)": 300,
+                    "Popurri / Concierto Full (10 min - 600s)": 600,
+                    "Demo Rapido (60s)": 60,
+                }
+                duracion_label = st.selectbox(
+                    "Duracion Cancion Full",
+                    list(duracion_opciones.keys()),
+                    index=0,
+                    key="ui_duracion_label",
                 )
+                duracion_sel = duracion_opciones[duracion_label]
+                st.session_state["ui_duracion_pista"] = duracion_sel
             with c_res:
                 resolucion_sel = st.selectbox(
                     "Calidad Imagen",
@@ -1515,9 +1585,7 @@ def main() -> None:
                 key="entrada_usuario",
             )
 
-            # ================================================================
             # FIRMA LEGAL RÁPIDA ONLINE (1 SOLO CLIC EN EL COTEJO)
-            # ================================================================
             consent = verificar_consentimiento(usuario)
             if not consent:
                 with st.container(border=True):
@@ -1565,7 +1633,7 @@ def main() -> None:
 
                 st.info(
                     f"**Genero:** {ia_combinar_generos(generos_para_ia)} | **BPM:** {bpm_prev if bpm_manual == 0 else bpm_manual} | "
-                    f"**Tonalidad:** {tonalidad_sel} | **Voz:** {voz_prev}"
+                    f"**Duracion:** {duracion_sel}s | **Voz:** {voz_prev}"
                 )
                 st.success(f"🎻🎛️ {expl_inst}")
                 st.write(f"{expl_prev} {expl_voz}")
@@ -1574,7 +1642,7 @@ def main() -> None:
 
             c1, c2 = st.columns(2)
             with c1:
-                generar = st.button("🎤 Generar Cancion + Orquesta WAV", type="primary", use_container_width=True)
+                generar = st.button("🎤 Generar Cancion Full + Orquesta WAV", type="primary", use_container_width=True)
             with c2:
                 if st.button("🖼 Generar Portada 5K UHD", use_container_width=True):
                     consent = verificar_consentimiento(usuario)
@@ -1608,7 +1676,7 @@ def main() -> None:
                 elif pin and not is_admin:
                     st.error("PIN incorrecto.")
                 else:
-                    with st.spinner("BASA IA produciendo obra completa (Audio + Portada 5K + Emisora + Historico)..."):
+                    with st.spinner(f"BASA IA produciendo obra completa ({duracion_sel}s Audio + Portada 5K + Emisora + Historico)..."):
                         if ritmo_modo == "Automatico - IA decide segun letra":
                             genero_base, expl_g, bpm_ia = ia_detectar_genero_desde_letra(
                                 entrada_usuario, ui.get("selected_genres", [])
@@ -1661,7 +1729,7 @@ def main() -> None:
                         safe_slug = re.sub(r"[^A-Za-z0-9_-]+", "_", project_title)[:30] or "tema_basa"
                         propiedad = consent.get("propiedad", "BASA Productions - Desarrollador")
 
-                        # 1. Pista Instrumental WAV 16-bit
+                        # 1. Pista Instrumental WAV 16-bit Full
                         out_wav = MEDIA_DIR / f"orquesta_{safe_slug}_{ts_tag}.wav"
                         generar_pista_instrumental_wav(
                             out_path=out_wav,
@@ -1674,13 +1742,13 @@ def main() -> None:
                         archivos_generados = [str(out_wav)]
                         add_asset(
                             vault,
-                            f"{project_title} (Orquesta WAV)",
+                            f"{project_title} (Orquesta WAV {duracion_sel}s)",
                             "audio_instrumental",
                             str(out_wav),
-                            {"genre": genero_final, "bpm": bpm_final, "propiedad": propiedad},
+                            {"genre": genero_final, "bpm": bpm_final, "duracion_seg": duracion_sel, "propiedad": propiedad},
                         )
 
-                        # 2. Portada oficial 5K automatica para YouTube y Emisora
+                        # 2. Portada oficial 5K automatica
                         out_cover = MEDIA_DIR / f"cover5K_{safe_slug}_{ts_tag}.jpg"
                         generate_cover_5k(
                             project_title,
@@ -1733,19 +1801,19 @@ def main() -> None:
                             en_radio=publicar_emisora_auto,
                         )
 
-                        st.success(f"✅ Obra Completa Producida y Guardada en Historico + Emisora 24/7: {project_title}")
+                        st.success(f"✅ Obra Full ({duracion_sel}s) Producida y Guardada en Historico + Emisora 24/7: {project_title}")
                         st.info(f"🎻🎛️ {expl_inst_final}")
                         st.image(str(out_cover), width=320)
 
                         if ok_mix:
-                            st.markdown("**🎧 Master Final (Voz + Orquestacion Hibrida):**")
+                            st.markdown("**🎧 Master Final (Voz + Orquestacion Hibrida Full):**")
                             st.audio(str(out_mix))
 
-                        st.markdown("**🥁 Pista Instrumental Hibrida (WAV 16-bit):**")
+                        st.markdown(f"**🥁 Pista Instrumental Hibrida Full ({duracion_sel}s - WAV 16-bit):**")
                         st.audio(str(out_wav))
                         with open(out_wav, "rb") as fw:
                             st.download_button(
-                                "⬇ Descargar Instrumental WAV",
+                                "⬇ Descargar Instrumental Full WAV",
                                 fw.read(),
                                 file_name=out_wav.name,
                                 mime="audio/wav",
@@ -1770,14 +1838,50 @@ def main() -> None:
                         autosave_callback()
 
     # ========================================================================
-    # TAB 2: CINE / SERIES / DRAMA / PELICULAS 5K
+    # TAB 2: CINE / PELICULAS / SERIES COMPLETAS HASTA 40 EPISODIOS EN 5K
     # ========================================================================
     with tab2:
-        st.subheader("🎬 Cine / Video / Serie / Drama / Pelicula en 5K Ultra HD")
+        st.subheader("🎬 Cine / Peliculas Completas / Series (Hasta 40 Episodios) en 5K Ultra HD")
         cc1, cc2 = st.columns(2)
         with cc1:
-            cine_title = st.text_input("Titulo de la Obra Audiovisual", value=ui["cine_title"], key="ui_cine_title")
-            cine_ep = st.text_input("Episodio / Temporada / Capitulo", value=ui["cine_ep"], key="ui_cine_ep")
+            cine_title = st.text_input("Titulo de la Pelicula o Serie", value=ui["cine_title"], key="ui_cine_title")
+            cine_ep = st.text_input("Temporada / Edicion / Subtitulo", value=ui["cine_ep"], key="ui_cine_ep")
+
+            tipo_video = st.selectbox(
+                "Formato Audiovisual",
+                [
+                    "Serie Completa (Hasta 40 Episodios) 5K",
+                    "Pelicula Completa Full 5K",
+                    "Novela / Drama Episodico 5K",
+                    "Video Musical Extendido 5K",
+                    "Documental / Noticiero Internacional 5K",
+                ],
+                key="tipo_video",
+            )
+
+            num_episodios = st.slider(
+                "Cantidad de Episodios / Capitulos (1 = Pelicula Unica, hasta 40 Episodios)",
+                min_value=1,
+                max_value=40,
+                value=int(ui.get("cine_num_episodios", 10)),
+                step=1,
+                key="ui_cine_num_episodios",
+            )
+
+            duracion_cine_opciones = {
+                "Cortometraje / Capitulo Agil (5 min - 300s)": 300,
+                "Episodio Serie Drama (15 min - 900s)": 900,
+                "Capitulo Serie Full (30 min - 1800s)": 1800,
+                "Pelicula Completa Full 5K (60 min - 3600s)": 3600,
+            }
+            duracion_cine_label = st.selectbox(
+                "Duracion Banda Sonora Full (Pelicula / Episodio)",
+                list(duracion_cine_opciones.keys()),
+                index=1,
+                key="ui_duracion_cine",
+            )
+            duracion_cine_seg = duracion_cine_opciones[duracion_cine_label]
+
             cine_style = st.selectbox("Estilo visual 5K", list(CINEMA_STYLES.keys()), key="ui_cine_style")
             cine_voice = st.selectbox("Voz narrador / personajes", list(VOICE_PROFILES.keys()), key="ui_cine_voice")
             cine_genre = st.selectbox(
@@ -1788,84 +1892,140 @@ def main() -> None:
                 else 0,
                 key="ui_cine_music_genre",
             )
-            cine_idea = st.text_area("Sinopsis / Drama / Historia", value=ui["cine_idea"], key="ui_cine_idea")
-            tipo_video = st.selectbox(
-                "Formato Audiovisual",
-                [
-                    "Pelicula Completa 5K",
-                    "Serie - Capitulo Dramatico",
-                    "Video Musical 5K",
-                    "Noticiero / Documental Internacional",
-                    "Corto / Reels / TikTok",
-                ],
-                key="tipo_video",
-            )
+            cine_idea = st.text_area("Sinopsis General / Trama de la Pelicula o Serie", value=ui["cine_idea"], key="ui_cine_idea")
+
         with cc2:
             cine_story = st.text_area(
-                "Storyboard 5K - Escena | Titulo | Descripcion",
+                "Storyboard Maestro 5K - Escena | Titulo | Descripcion",
                 value=ui["cine_storyboard_text"],
-                height=220,
+                height=190,
                 key="ui_cine_storyboard_text",
             )
             scenes = parse_storyboard(cine_story)
-            st.info(f"Escenas: {len(scenes)} | Formato: {tipo_video} | Render 5K (5120x2880)")
+            st.info(
+                f"Produccion: **{num_episodios} {'Episodio(s)' if num_episodios > 1 else 'Pelicula Completa'}** | "
+                f"Banda Sonora: **{duracion_cine_seg // 60} min ({duracion_cine_seg}s)** | Render **5K (5120x2880)**"
+            )
             for s in scenes:
                 st.markdown(f"**{s['id']} - {s['title']}**: {s['desc']}")
 
-        if st.button("🎬 Generar Produccion Audiovisual 5K + Banda Sonora", type="primary"):
+            episodios_preview = ia_generar_serie_completa(
+                cine_title, cine_idea, num_episodios, cine_style, cine_genre, cine_story
+            )
+            with st.expander(f"📋 Ver Estructura de los {num_episodios} Episodios / Actos Generados por IA"):
+                for ep_item in episodios_preview:
+                    st.markdown(f"**{ep_item['titulo']}** — *{ep_item['fase']}*")
+
+        if st.button(
+            f"🎬 Generar {'Serie Completa (' + str(num_episodios) + ' Episodios)' if num_episodios > 1 else 'Pelicula Completa'} 5K + Banda Sonora Full",
+            type="primary",
+            use_container_width=True,
+        ):
             consent = verificar_consentimiento(usuario)
             if not consent:
                 st.error("Debe firmar contrato legal primero (puedes marcar el cotejo en la Pestaña 1 o en la barra lateral).")
             else:
-                with st.spinner("Renderizando poster 5K (5120x2880), banda sonora hibrida y narracion..."):
+                with st.spinner(
+                    f"Renderizando Poster 5K (5120x2880), guion completo de {num_episodios} episodio(s), banda sonora de {duracion_cine_seg // 60} min y narracion..."
+                ):
                     ts_c = datetime.now().strftime("%H%M%S")
-                    poster = MEDIA_DIR / f"cine5K_poster_{ts_c}.jpg"
+                    safe_cine = re.sub(r"[^A-Za-z0-9_-]+", "_", cine_title)[:28] or "serie_basa"
+                    propiedad = consent.get("propiedad", "BASA Productions - Desarrollador")
+
+                    # 1. Poster Oficial 5K
+                    poster = MEDIA_DIR / f"cine5K_poster_{safe_cine}_{ts_c}.jpg"
                     generate_cover_5k(
-                        cine_title,
+                        f"{cine_title} ({num_episodios} Ep.)" if num_episodios > 1 else cine_title,
                         "Lic. Pedro Baldera - BASA Cinema 5K",
                         cine_genre,
                         cine_style,
                         poster,
                         resolucion="5K Cinema Ultra HD (5120x2880)",
                     )
-                    add_asset(vault, cine_title, "poster_cine_5k", str(poster), {"style": cine_style, "tipo": tipo_video})
-
-                    insts_cine, _ = ia_combinar_instrumentacion([cine_genre], [], modo_fusion_mundial=True)
-                    banda_wav = MEDIA_DIR / f"cine_score_{ts_c}.wav"
-                    generar_pista_instrumental_wav(banda_wav, cine_genre, 102, "Dm (Re Menor)", 20, insts_cine)
-                    add_asset(vault, f"{cine_title} (Score 5K)", "audio_instrumental", str(banda_wav), {"tipo": tipo_video})
-
-                    full_script = f"{cine_title}. {cine_idea}. " + " ".join(
-                        [f"{s['title']}. {s['desc']}" for s in scenes]
+                    add_asset(
+                        vault,
+                        f"{cine_title} (Poster 5K)",
+                        "poster_cine_5k",
+                        str(poster),
+                        {"style": cine_style, "tipo": tipo_video, "episodios": num_episodios},
                     )
-                    out_audio = MEDIA_DIR / f"cine_narracion_{ts_c}.mp3"
-                    ok, msg = generate_voice_audio(full_script, VOICE_PROFILES[cine_voice], out_audio)
-                    archivos_cine = [str(poster), str(banda_wav)]
+
+                    # 2. Banda Sonora Full (hasta 60 min)
+                    insts_cine, _ = ia_combinar_instrumentacion([cine_genre], [], modo_fusion_mundial=True)
+                    banda_wav = MEDIA_DIR / f"cine_score_{safe_cine}_{ts_c}.wav"
+                    generar_pista_instrumental_wav(
+                        banda_wav, cine_genre, 102, "Dm (Re Menor)", duracion_cine_seg, insts_cine
+                    )
+                    add_asset(
+                        vault,
+                        f"{cine_title} (Banda Sonora Full {duracion_cine_seg // 60}m)",
+                        "audio_instrumental",
+                        str(banda_wav),
+                        {"tipo": tipo_video, "duracion_seg": duracion_cine_seg},
+                    )
+
+                    # 3. Guion maestro de todos los episodios (hasta 40)
+                    lista_episodios = ia_generar_serie_completa(
+                        cine_title, cine_idea, num_episodios, cine_style, cine_genre, cine_story
+                    )
+                    guion_completo_txt = "\n\n" + ("=" * 60 + "\n").join([ep["guion"] for ep in lista_episodios])
+                    guion_file = MEDIA_DIR / f"guion_serie_{num_episodios}ep_{safe_cine}_{ts_c}.txt"
+                    guion_file.write_text(guion_completo_txt, encoding="utf-8")
+
+                    # 4. Narracion principal
+                    narracion_texto = f"{cine_title}. {cine_idea}. " + " ".join(
+                        [f"{ep['titulo']}. {ep['fase']}." for ep in lista_episodios[:12]]
+                    )
+                    out_audio = MEDIA_DIR / f"cine_narracion_{safe_cine}_{ts_c}.mp3"
+                    ok, msg = generate_voice_audio(narracion_texto, VOICE_PROFILES[cine_voice], out_audio)
+
+                    archivos_cine = [str(poster), str(banda_wav), str(guion_file)]
                     if ok:
                         archivos_cine.append(str(out_audio))
-                        add_asset(vault, cine_title, "audio_cine", str(out_audio), {"scenes": len(scenes), "tipo": tipo_video})
+                        add_asset(
+                            vault,
+                            f"{cine_title} (Narracion)",
+                            "audio_cine",
+                            str(out_audio),
+                            {"episodios": num_episodios, "tipo": tipo_video},
+                        )
 
-                    guardar_historico(
+                    obra_cine = guardar_historico(
                         usuario,
-                        cine_title,
-                        full_script,
+                        f"{cine_title} ({num_episodios} Episodios)" if num_episodios > 1 else cine_title,
+                        guion_completo_txt,
                         cine_genre,
                         tipo_video,
                         cine_voice,
                         "IA Automatica",
                         archivos_cine,
-                        consent.get("propiedad", "BASA Productions - Desarrollador"),
+                        propiedad,
                         instrumentos=insts_cine,
                         en_radio=True,
                     )
-                    st.success("Produccion 5K UHD + Banda Sonora generadas, guardadas y enviadas a Emisora 24/7.")
+
+                    st.success(
+                        f"✅ Produccion 5K UHD ({num_episodios} Episodio(s) + Banda Sonora {duracion_cine_seg // 60} min) generada y guardada."
+                    )
                     st.image(str(poster), width=420)
+                    st.markdown(f"**🎼 Banda Sonora Full ({duracion_cine_seg // 60} minutos):**")
                     st.audio(str(banda_wav))
                     if ok:
+                        st.markdown("**🎙️ Narracion Oficial:**")
                         st.audio(str(out_audio))
 
+                    zip_serie = crear_paquete_obra_zip(obra_cine, cine_title)
+                    with open(zip_serie, "rb") as fzs:
+                        st.download_button(
+                            f"📦 Descargar Serie/Pelicula Completa ({num_episodios} Ep. + Poster 5K + Banda Sonora ZIP)",
+                            fzs.read(),
+                            file_name=zip_serie.name,
+                            mime="application/zip",
+                            use_container_width=True,
+                        )
+
     # ========================================================================
-    # TAB 3: MI EMISORA DE RADIO & TV ONLINE 24/7 (SUPERANDO STREAMING)
+    # TAB 3: MI EMISORA DE RADIO & TV ONLINE 24/7
     # ========================================================================
     with tab3:
         st.subheader(f"📻 {OFFICIAL_RADIO_NAME} — Transmision Online Continua")
@@ -1942,7 +2102,7 @@ def main() -> None:
                     obra_obj_sel = o
                     default_pub_t = o.get("titulo", default_pub_t)
                     default_pub_l = (
-                        f"{o.get('letra', '')}\n\n"
+                        f"{o.get('letra', '')[:3500]}\n\n"
                         f"---\nProducido por Lic. Pedro Baldera - BASA Productions\n"
                         f"Genero: {o.get('genero')} | Instrumentacion: {', '.join(o.get('instrumentos', [])[:8])}\n"
                         f"Suscribete al canal oficial: {OFFICIAL_YOUTUBE_CHANNEL}\n"
@@ -2066,9 +2226,8 @@ def main() -> None:
 
                 with st.expander(f"🎼 {t_fecha} — {t_title} [{t_genero}] | {t_prop}"):
                     st.write(f"**Formato:** {t.get('formato')} | **Voz:** {t.get('voz')} | **Canal:** {OFFICIAL_YOUTUBE_CHANNEL}")
-                    st.text_area("Letra / Guion Guardado", t.get("letra", ""), height=100, key=f"lyr_{t_id}", disabled=True)
+                    st.text_area("Letra / Guion Guardado", t.get("letra", ""), height=120, key=f"lyr_{t_id}", disabled=True)
 
-                    # Reproducir archivos asociados
                     for idx_f, fpath in enumerate(t.get("archivos", [])):
                         p = Path(fpath)
                         if p.exists() and p.is_file():
@@ -2078,7 +2237,6 @@ def main() -> None:
                             elif p.suffix.lower() in [".jpg", ".jpeg", ".png"]:
                                 st.image(str(p), width=260)
 
-                    # Acciones comerciales: Descargar Paquete, Enviar a Emisora, Poner en Venta
                     ca1, ca2, ca3 = st.columns(3)
                     with ca1:
                         z_obra = crear_paquete_obra_zip(t, t_title)
