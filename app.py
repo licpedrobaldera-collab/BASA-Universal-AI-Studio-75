@@ -1028,17 +1028,23 @@ def add_asset(vault: dict[str, Any], title: str, kind: str, file_path: str, meta
 
 
 def verificar_consentimiento(usuario: str) -> dict[str, Any] | None:
+    session_key = f"consent_cache_{usuario}"
+    if session_key in st.session_state and st.session_state[session_key]:
+        return st.session_state[session_key]
     data = _load_json(LEGAL_FILE, {})
     if not isinstance(data, dict):
         return None
-    return data.get(usuario)
+    found = data.get(usuario)
+    if found:
+        st.session_state[session_key] = found
+    return found
 
 
 def guardar_consentimiento(usuario: str, acepta: bool, es_reserva_pagada: bool) -> dict[str, Any]:
     data = _load_json(LEGAL_FILE, {})
     if not isinstance(data, dict):
         data = {}
-    texto_hash = hashlib.sha256((LEGAL_TEXT + usuario + datetime.now().isoformat()).encode("utf-8")).hexdigest()[:16]
+    texto_hash = hashlib.sha256((LEGAL_TEXT + usuario + datetime.now().isoformat()).encode("utf-8")).hexdigest()[:16].upper()
     entry = {
         "usuario": usuario,
         "acepta_cesion": acepta,
@@ -1052,7 +1058,14 @@ def guardar_consentimiento(usuario: str, acepta: bool, es_reserva_pagada: bool) 
     }
     data[usuario] = entry
     _save_json(LEGAL_FILE, data)
+    st.session_state[f"consent_cache_{usuario}"] = entry
     return entry
+
+
+def firmar_rapido_callback(usuario: str) -> None:
+    if st.session_state.get("chk_firma_rapida_estudio", False):
+        es_reserva = bool(st.session_state.get("chk_reserva_rapida_estudio", False))
+        guardar_consentimiento(usuario, True, es_reserva)
 
 
 def guardar_historico(
@@ -1127,14 +1140,15 @@ def guardar_historico(
     return entry
 
 
-def crear_paquete_obra_zip(obra: dict[str, Any]) -> Path:
+def crear_paquete_obra_zip(obra: dict[str, Any], titulo_override: str | None = None) -> Path:
     init_dirs()
-    safe = re.sub(r"[^A-Za-z0-9_-]+", "_", str(obra.get("titulo", "Obra_BASA")))[:35] or "Obra_BASA"
+    titulo_base = titulo_override or str(obra.get("titulo", "Obra_BASA"))
+    safe = re.sub(r"[^A-Za-z0-9_-]+", "_", titulo_base)[:35] or "Obra_BASA"
     zip_path = AUTO_EXPORT_DIR / f"PACK_{safe}_{obra.get('id', '000')}.zip"
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
         meta_txt = (
             f"BASA UNIVERSAL AI STUDIO v13 - PAQUETE OFICIAL DE OBRA\n"
-            f"Titulo: {obra.get('titulo')}\n"
+            f"Titulo: {titulo_base}\n"
             f"Genero: {obra.get('genero')}\n"
             f"Propiedad / Derechos: {obra.get('propiedad')}\n"
             f"Canal Oficial YouTube: {OFFICIAL_YOUTUBE_CHANNEL}\n"
@@ -1317,10 +1331,9 @@ def main() -> None:
                 if not acepta:
                     st.error("Debe marcar el cotejo de aceptacion para firmar.")
                 else:
-                    e = guardar_consentimiento(usuario, True, reserva)
-                    st.success(f"Contrato firmado. Propiedad: {e['propiedad']}.")
+                    consent = guardar_consentimiento(usuario, True, reserva)
+                    st.success(f"Contrato firmado. Propiedad: {consent['propiedad']}.")
                     st.rerun()
-            consent = None
 
         st.divider()
         st.header("📊 Estadisticas Globales")
@@ -1339,6 +1352,9 @@ def main() -> None:
             st.success(f"ZIP: {zp.name}")
             with open(zp, "rb") as f:
                 st.download_button("⬇ Descargar ZIP", f.read(), file_name=zp.name, mime="application/zip")
+
+    # Re-verificar consentimiento tras posible firma
+    consent = verificar_consentimiento(usuario)
 
     tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(
         [
@@ -1499,6 +1515,30 @@ def main() -> None:
                 key="entrada_usuario",
             )
 
+            # ================================================================
+            # FIRMA LEGAL RÁPIDA ONLINE (1 SOLO CLIC EN EL COTEJO)
+            # ================================================================
+            consent = verificar_consentimiento(usuario)
+            if not consent:
+                with st.container(border=True):
+                    st.markdown("#### ⚖️ Firma Legal Rápida Online (1 sola vez)")
+                    with st.expander("📜 Leer Contrato Legal Completo antes de marcar"):
+                        st.text_area("Contrato BASA", LEGAL_TEXT, height=180, disabled=True, key="legal_txt_studio")
+                    st.checkbox(
+                        "💰 Pague Reserva (Opcional - Marcar antes si la obra es de MI propiedad exclusiva)",
+                        key="chk_reserva_rapida_estudio",
+                    )
+                    st.checkbox(
+                        "✅ Acepto el Contrato Legal y firmo online ahora mismo (cierra este aviso y habilita el registro)",
+                        key="chk_firma_rapida_estudio",
+                        on_change=firmar_rapido_callback,
+                        args=(usuario,),
+                    )
+            else:
+                st.success(
+                    f"✍️ **Contrato Firmado Online** (`{usuario}` | Hash: `{consent.get('hash_legal', 'OK')}`) — Listo para crear y registrar."
+                )
+
             if st.button("✨ Vista Previa IA - Orquestacion, Genero y Voz", use_container_width=True):
                 genero_prev, expl_prev, bpm_prev = ia_detectar_genero_desde_letra(
                     entrada_usuario, ui.get("selected_genres", [])
@@ -1537,8 +1577,9 @@ def main() -> None:
                 generar = st.button("🎤 Generar Cancion + Orquesta WAV", type="primary", use_container_width=True)
             with c2:
                 if st.button("🖼 Generar Portada 5K UHD", use_container_width=True):
+                    consent = verificar_consentimiento(usuario)
                     if not consent:
-                        st.error("⚖️ Debe firmar el contrato legal en la barra lateral antes de registrar.")
+                        st.error("⚖️ Marca el cotejo de Firma Legal arriba para habilitar la generación.")
                     else:
                         with st.spinner(f"Renderizando imagen {resolucion_sel}..."):
                             gen_tmp, _, _ = ia_detectar_genero_desde_letra(
@@ -1561,8 +1602,9 @@ def main() -> None:
                             st.image(str(out_img), width=360)
 
             if generar:
+                consent = verificar_consentimiento(usuario)
                 if not consent:
-                    st.error("⚖️ Debe marcar y firmar el contrato legal en la barra lateral ANTES de registrar.")
+                    st.error("⚖️ Marca el cotejo de Firma Legal arriba para habilitar la generación.")
                 elif pin and not is_admin:
                     st.error("PIN incorrecto.")
                 else:
@@ -1771,8 +1813,9 @@ def main() -> None:
                 st.markdown(f"**{s['id']} - {s['title']}**: {s['desc']}")
 
         if st.button("🎬 Generar Produccion Audiovisual 5K + Banda Sonora", type="primary"):
+            consent = verificar_consentimiento(usuario)
             if not consent:
-                st.error("Debe firmar contrato legal primero.")
+                st.error("Debe firmar contrato legal primero (puedes marcar el cotejo en la Pestaña 1 o en la barra lateral).")
             else:
                 with st.spinner("Renderizando poster 5K (5120x2880), banda sonora hibrida y narracion..."):
                     ts_c = datetime.now().strftime("%H%M%S")
@@ -1944,6 +1987,7 @@ def main() -> None:
         c_yt1, c_yt2 = st.columns(2)
         with c_yt1:
             if st.button("🚀 Publicar y Registrar Lanzamiento Oficial", type="primary", use_container_width=True):
+                consent = verificar_consentimiento(usuario)
                 if not consent:
                     st.error("Debe firmar contrato legal primero (1 sola vez).")
                 else:
@@ -2002,6 +2046,7 @@ def main() -> None:
         if not isinstance(ventas, list):
             ventas = []
 
+        consent = verificar_consentimiento(usuario)
         st.write(
             f"**Usuario:** {usuario} | **Total Obras Producidas:** {len(mis_temas)} | "
             f"**Propiedad Legal:** {consent.get('propiedad', 'Sin contrato') if consent else 'Sin contrato'}"
